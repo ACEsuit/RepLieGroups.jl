@@ -3,7 +3,7 @@ module O3
 using StaticArrays
 using LinearAlgebra: norm, rank, svd, Diagonal, tr
 
-export ClebschGordan, Rot3DCoeffs, ri_basis, rpi_basis
+export ClebschGordan, Rot3DCoeffs
 
 
 # ------------------- recursion details for different Ls 
@@ -23,7 +23,7 @@ coco_filter(::Val{0}, ll, mm) = iseven(sum(ll)) && (sum(mm) == 0)
 
 coco_filter(::Val{0}, ll, mm, kk) = iseven(sum(ll)) && (sum(mm) == sum(kk) == 0)
 
-# coco_dot(u1::Invariant, u2::Invariant) = u1.val * u2.val
+coco_dot(u1::Real, u2::Real) = u1 * u2
 
 # -------------------
 
@@ -41,6 +41,8 @@ struct Rot3DCoeffs{L, T}
    cg::ClebschGordan{T}
 end
 
+_ValL(::Rot3DCoeffs{L}) where {L} = Val{L}() 
+
 # -----------------------------------
 # iterating over an m collection
 # -----------------------------------
@@ -49,21 +51,28 @@ _mvec(::CartesianIndex{0}) = SVector{0, Int}()
 
 _mvec(mpre::CartesianIndex) = SVector(Tuple(mpre)...)
 
-struct MRange{N, T2, TP}
+struct MRange{L, N, T2}
    ll::SVector{N, Int}
    cartrg::T2
-	phi::TP
 end
 
+_getL(::MRange{L}) where {L} = L 
+_ValL(::MRange{L}) where {L} = Val{L}()
+
 Base.length(mr::MRange) =
-		sum(mt -> coco_filter(mr.phi, mr.ll, _mvec(mt)), mr.cartrg)
+		sum(mt -> coco_filter(_ValL(mr), mr.ll, _mvec(mt)), mr.cartrg)
 
 """
 Given an l-vector `ll` iterate over all combinations of `mm` vectors  of
 the same length such that `sum(mm) == 0`
 """
-_mrange(phi, ll) =
-	MRange(ll, CartesianIndices(ntuple(i -> -ll[i]:ll[i], length(ll))), phi)
+_mrange(L::Integer, ll) = _mrange(Val{L}(), ll)
+
+function _mrange(::Val{L}, ll) where {L}
+   N = length(ll) 
+   cartrg = CartesianIndices(ntuple(i -> -ll[i]:ll[i], length(ll)))
+	return MRange{L, N, typeof(cartrg)}(ll, cartrg)
+end
 
 # TODO: should we impose here that (ll, mm) are lexicographically ordered?
 
@@ -74,7 +83,7 @@ function Base.iterate(mr::MRange, idx::Integer=0)
 			return nothing
 		end
 		mm = _mvec(mr.cartrg[idx])
-		if coco_filter(mr.phi, mr.ll, mm)
+		if coco_filter(_ValL(mr), mr.ll, mm)
 			return mm, idx
 		end
 	end
@@ -180,13 +189,13 @@ dicttype(N::Integer, TP) = dicttype(Val(N), TP)
 dicttype(::Val{N}, TP) where {N} =
    Dict{Tuple{SVector{N,Int}, SVector{N,Int}, SVector{N,Int}}, TP}
 
-Rot3DCoeffs(φ, T=Float64) = Rot3DCoeffs(Dict[], ClebschGordan(T), φ)
+Rot3DCoeffs(L, T=Float64) = Rot3DCoeffs{L, T}(Dict[], ClebschGordan(T))
 
 
-function get_vals(A::Rot3DCoeffs{T}, valN::Val{N}) where {T,N}
+function get_vals(A::Rot3DCoeffs{L, T}, valN::Val{N}) where {L, T,N}
 	# make up an ll, kk, mm and compute a dummy coupling coeff
 	ll, mm, kk = SVector(0), SVector(0), SVector(0)
-	cc0 = coco_zeros(A.phi, ll, mm, kk, T, A)
+	cc0 = coco_zeros(_ValL(A), T, ll, mm, kk)
 	TP = typeof(cc0)
 	if length(A.vals) < N
 		# create more dictionaries of the correct type
@@ -200,9 +209,9 @@ end
 _key(ll::StaticVector{N}, mm::StaticVector{N}, kk::StaticVector{N}) where {N} =
       (SVector{N, Int}(ll), SVector{N, Int}(mm), SVector{N, Int}(kk))
 
-function (A::Rot3DCoeffs{T})(ll::StaticVector{N},
+function (A::Rot3DCoeffs{L, T})(ll::StaticVector{N},
                              mm::StaticVector{N},
-                             kk::StaticVector{N}) where {T, N}
+                             kk::StaticVector{N}) where {L, T, N}
    vals = get_vals(A, Val(N))  # this should infer the type!
    key = _key(ll, mm, kk)
    if haskey(vals, key)
@@ -219,16 +228,16 @@ end
 # TODO: actually this seems false; it is only one recursion step, and a bit
 #       or reshuffling should allow us to get rid of the {N = 2} case.
 
-(A::Rot3DCoeffs{T})(ll::StaticVector{1},
+(A::Rot3DCoeffs{L, T})(ll::StaticVector{1},
                  mm::StaticVector{1},
-                 kk::StaticVector{1}) where {T} =
-		coco_init(A.phi, ll[1], mm[1], kk[1], T, A)
+                 kk::StaticVector{1}) where {L, T} =
+		coco_init(_ValL(A), T, ll[1], mm[1], kk[1])
 
 
-function _compute_val(A::Rot3DCoeffs{T}, ll::StaticVector{N},
+function _compute_val(A::Rot3DCoeffs{L, T}, ll::StaticVector{N},
                                          mm::StaticVector{N},
-                                         kk::StaticVector{N}) where {T, N}
-	val = coco_zeros(A.phi, ll, mm, kk, T, A)
+                                         kk::StaticVector{N}) where {L, T, N}
+	val = coco_zeros(_ValL(A), T, ll, mm, kk)
 	TV = typeof(val)
 
 	tmp = zero(MVector{N-1, Int})
@@ -266,9 +275,8 @@ end
 # ----------------------------------------------------------------------
 
 
-function re_basis(A::Rot3DCoeffs{T}, ll::SVector) where {T}
-	TP = typeof(A.phi)
-	TCC = coco_type(TP)
+function re_basis(A::Rot3DCoeffs{L, T}, ll::SVector) where {L, T}
+	TCC = coco_type(_ValL(A), T)
 	CC, Mll = compute_Al(A, ll)  # CC::Vector{Vector{...}}
 	G = [ sum( coco_dot(CC[a][i], CC[b][i]) for i = 1:length(Mll) )
 			for a = 1:length(CC), b = 1:length(CC) ]
@@ -286,9 +294,9 @@ end
 
 
 # function barrier
-function compute_Al(A::Rot3DCoeffs, ll::SVector)
-	Mll = collect(_mrange(A.phi, ll))
-	TP = typeof(A.phi)
+function compute_Al(A::Rot3DCoeffs{L, T}, ll::SVector) where {L, T}
+	Mll = collect(_mrange(_ValL(A), ll))
+   TP = coco_type(_ValL(A), T)
 	if length(Mll) == 0
 		return Vector{TP}[], Mll
 	end
@@ -299,10 +307,10 @@ end
 
 # TODO: what was TA for? Can we get rid of it via coco_type? 
 
-function __compute_Al(A::Rot3DCoeffs{T}, ll, Mll, TP, TA) where {T}
+function __compute_Al(A::Rot3DCoeffs{L, T}, ll, Mll, TP, TA) where {L, T}
 	lenMll = length(Mll)
 	# each element of CC will be one row of the coupling coefficients
-	TCC = coco_type(TP)
+	TCC = coco_type(_ValL(A), T)
 	CC = Vector{TCC}[]
 	# some utility funcions to allow coco_init to return either a property
 	# or a vector of properties
@@ -320,11 +328,15 @@ function __compute_Al(A::Rot3DCoeffs{T}, ll, Mll, TP, TA) where {T}
 	for (ik, kk) in enumerate(Mll)  # loop over possible basis functions
 		# do a dummy calculation to determine how many coefficients we will get
 		cc0 = A(ll, Mll[1], kk)::TA
-		numcc = (cc0 isa AbstractProperty ? 1 : length(cc0))
+      @assert cc0 isa Number 
+      numcc = 1 
+      # the assert above replaced the following line; to be replaced with 
+      #     the suitable generalisation to L > 0 
+		# numcc = (cc0 isa AbstractProperty ? 1 : length(cc0))
 		# allocate the right number of vectors to store basis function coeffs
 		cc = [ Vector{TCC}(undef, lenMll) for _=1:numcc ]
 		for (im, mm) in enumerate(Mll) # loop over possible indices
-			if !coco_filter(A.phi, ll, mm, kk)
+			if !coco_filter(_ValL(A), ll, mm, kk)
 				cc00 = zeros(TP, length(cc))::TA
 				__into_cc!(cc, cc00, im)
 			else
