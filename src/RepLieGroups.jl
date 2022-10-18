@@ -1,5 +1,5 @@
 module RepLieGroups
 
-# Write your package code here.
+include("obsolete/obsolete.jl")
 
 end
