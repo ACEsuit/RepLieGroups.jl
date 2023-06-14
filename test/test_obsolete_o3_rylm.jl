@@ -57,4 +57,51 @@ for ν = 2:5
    println()
 end
 
+## Task 1: Check the order of the rSH - which convention is used
+# NOTE: There are several different ways to define rSH, including the one used in Polynomials4ML.jl
+#       Another typical one is something like "[px, py, pz]-convention", which allows the rSH transform
+#       like an EuclideanVector. In the following, the A(l) matrix is the transformation from the two 
+#       conventions (the one used in Polynomials4ML and the Euclidean one). _ctran(l), on the other hand,
+#       is the transformation from cSH to the Euclidean rSH. All those transformations are expected to be 
+#       used to construct the coupling coefficients for the rSH ACE.
 
+using SparseArrays
+function A(l::Int64)
+   if l == 1
+      return [0 0 -1; 1 0 0; 0 1 0]'# [0 1 0;0 0 1; -1 0 0]'
+   else return I
+   end
+end
+
+function _ctran(l::Int64,m::Int64,μ::Int64)
+   if abs(m) ≠ abs(μ)
+      return 0
+   elseif abs(m) == 0
+      return 1
+   elseif m > 0 && μ > 0
+      return 1/sqrt(2)
+   elseif m > 0 && μ < 0
+      return (-1)^m/sqrt(2)
+   elseif m < 0 && μ > 0
+      return  - im * (-1)^m/sqrt(2)
+   else
+      return im/sqrt(2)
+   end
+end
+
+_ctran(l::Int64) = sparse(Matrix{ComplexF64}([ _ctran(l,m,μ) for m = -l:l, μ = -l:l ]))
+
+ctran(l::Int64) = SMatrix{2l+1,2l+1}(A(l) * _ctran(l))
+
+@info("Test whether or not we found a correct transformation from the two rSHs")
+basis = RYlmBasis(1)
+for ntest = 1:30
+   x = @SVector rand(3)
+   Ylm = evaluate(basis, x)[2:4]
+   Ylm = A(1)' * Ylm
+   Q = rand_rot()
+   Ylm_r = evaluate(basis, Q * x)[2:4]
+   Ylm_r = A(1)' * Ylm_r
+    print_tf(@test Q' * Ylm_r ≈ Ylm)
+end
+println()
