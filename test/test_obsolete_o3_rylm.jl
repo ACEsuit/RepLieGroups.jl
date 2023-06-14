@@ -91,7 +91,7 @@ end
 
 _ctran(l::Int64) = sparse(Matrix{ComplexF64}([ _ctran(l,m,μ) for m = -l:l, μ = -l:l ]))
 
-ctran(l::Int64) = SMatrix{2l+1,2l+1}(A(l) * _ctran(l))
+ctran(l::Int64) = l == 1 ? SMatrix{2l+1,2l+1}([0 1 0;0 0 1; -1 0 0]' * _ctran(l)) : SMatrix{2l+1,2l+1}(_ctran(l))
 
 @info("Test whether or not we found a correct transformation from the two rSHs")
 basis = RYlmBasis(1)
@@ -102,6 +102,19 @@ for ntest = 1:30
    Q = rand_rot()
    Ylm_r = evaluate(basis, Q * x)[2:4]
    Ylm_r = A(1)' * Ylm_r
+    print_tf(@test Q' * Ylm_r ≈ Ylm)
+end
+println()
+
+@info("Test whether or not we found a correct transformation from cSH to the Euclidean rSH")
+basis = CYlmBasis(1)
+for ntest = 1:30
+   x = @SVector rand(3)
+   Ylm = evaluate(basis, x)[2:4]
+   Ylm = ctran(1) * Ylm
+   Q = rand_rot()
+   Ylm_r = evaluate(basis, Q * x)[2:4]
+   Ylm_r = ctran(1) * Ylm_r
     print_tf(@test Q' * Ylm_r ≈ Ylm)
 end
 println()
