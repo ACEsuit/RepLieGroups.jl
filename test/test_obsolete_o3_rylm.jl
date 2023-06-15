@@ -69,6 +69,12 @@ using SparseArrays
 function A(l::Int64)
    if l == 1
       return [0 0 -1; 1 0 0; 0 1 0]'# [0 1 0;0 0 1; -1 0 0]'
+   elseif l == 2
+      return [-1 0 0 0 0; 0 1 0 0 0; 0 0 1 0 0; 0 0 0 1 0; 0 0 0 0 1]'
+   elseif l == 3
+      return [1 0 0 0 0 0 0; 0 -1 0 0 0 0 0; 0 0 -1 0 0 0 0; 0 0 0 -1 0 0 0; 0 0 0 0 -1 0 0; 0 0 0 0 0 1 0; 0 0 0 0 0 0 1]
+   elseif l == 4
+      return [1 0 0 0 0 0 0 0 0; 0 0 0 0 0 0 0 1 0; 0 0 1 0 0 0 0 0 0; 0 0 0 0 0 1 0 0 0; 0 0 0 0 -1 0 0 0 0; 0 0 0 -1 0 0 0 0 0; 0 0 0 0 0 0 -1 0 0; 0 -1 0 0 0 0 0 0 0; 0 0 0 0 0 0 0 0 -1]
    else return I
    end
 end
@@ -102,7 +108,7 @@ for ntest = 1:30
    Q = rand_rot()
    Ylm_r = evaluate(basis, Q * x)[2:4]
    Ylm_r = A(1)' * Ylm_r
-    print_tf(@test Q' * Ylm_r ≈ Ylm)
+   print_tf(@test Q' * Ylm_r ≈ Ylm)
 end
 println()
 
@@ -115,6 +121,29 @@ for ntest = 1:30
    Q = rand_rot()
    Ylm_r = evaluate(basis, Q * x)[2:4]
    Ylm_r = ctran(1) * Ylm_r
-    print_tf(@test Q' * Ylm_r ≈ Ylm)
+   print_tf(@test Q' * Ylm_r ≈ Ylm)
 end
 println()
+
+## NOTE: Let C_{lm} to be Polynomials4ML rSH, Y_{lm} the Euclidean rSH and Y_l^m, the cSH. 
+#        The above then means: (1) A(1)' * C_{lm} = Y_{lm}; (2) Ctran(1) * Y_l^m = Y_{lm} and hence
+#        C_{lm} = A(1) * Ctran(1) * Y_l^m. The following code tests it.
+
+using WignerD, Rotations ## Not able to use latest ACE...
+Lmax = 4
+basis = RYlmBasis(Lmax)
+for L = 0:Lmax
+   @info("Test whether or not we found a correct transformation from cSH to rSH for L = $L")
+   for ntest = 1:30
+      x = @SVector rand(3)
+      θ = rand() * 2pi
+      Q = RotXYZ(0, 0, θ)
+      D = wignerD(L, 0, 0, θ)
+      Ylm = evaluate(basis, x)[L^2+1:(L+1)^2]
+      Ylm = ctran(L)' * A(L)' * Ylm
+      Ylm_r = evaluate(basis, Q * x)[L^2+1:(L+1)^2]
+      Ylm_r = ctran(L)' * A(L)' * Ylm_r
+      print_tf(@test D * Ylm_r ≈ Ylm)
+   end
+   println()
+end
