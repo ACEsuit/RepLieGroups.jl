@@ -61,11 +61,14 @@ end
 # NOTE: There are several different ways to define rSH, including the one used in Polynomials4ML.jl
 #       Another typical one is something like "[px, py, pz]-convention", which allows the rSH transform
 #       like an EuclideanVector. In the following, the A(l) matrix is the transformation from the two 
-#       conventions (the one used in Polynomials4ML and the Euclidean one). _ctran(l), on the other hand,
-#       is the transformation from cSH to the Euclidean rSH. All those transformations are expected to be 
-#       used to construct the coupling coefficients for the rSH ACE.
+#       conventions (the one used in Polynomials4ML and the Euclidean one), while ctran(l) is the transformation 
+#       from cSH to the Euclidean rSH. All those transformations are expected to be used to construct the coupling coefficients for the rSH ACE.
 
 using SparseArrays
+
+# NOTE: There is a way to write the following transformations more elegantly, 
+#       i.e. the Condon-Shortley-ish thing;
+#       I am keeping this A function for now to see how this is connected to Euclidean rSH.
 function A(l::Int64)
    if l == 1
       return [0 0 -1; 1 0 0; 0 1 0]'# [0 1 0;0 0 1; -1 0 0]'
@@ -125,11 +128,11 @@ for ntest = 1:30
 end
 println()
 
-## NOTE: Let C_{lm} to be Polynomials4ML rSH, Y_{lm} the Euclidean rSH and Y_l^m, the cSH. 
+## NOTE: Let C_{lm} be the Polynomials4ML rSH, Y_{lm} the Euclidean rSH and Y_l^m, the cSH. 
 #        The above then means: (1) A(1)' * C_{lm} = Y_{lm}; (2) Ctran(1) * Y_l^m = Y_{lm} and hence
 #        C_{lm} = A(1) * Ctran(1) * Y_l^m. The following code tests it.
 
-using WignerD, Rotations ## Not able to use latest ACE...
+using WignerD, Rotations ## Call the two packages for Wigner matrices as we are currently not able to use latest ACE...
 Lmax = 4
 basis = RYlmBasis(Lmax)
 for L = 0:Lmax
