@@ -3,9 +3,6 @@ module O3
 using StaticArrays, SparseArrays
 using LinearAlgebra: norm, rank, svd, Diagonal, tr
 
-# using Polynomials4ML: RYlmBasis
-# using Polynomials4ML
-
 export ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_new
 
 
@@ -196,7 +193,7 @@ Ctran(l::Int64) = sparse(Matrix{ComplexF64}([ Ctran(l,m,μ) for m = -l:l, μ = -
 #        if we write Polynomials4ML rSH as R_{lm} and cSH as Y_{lm} and their corresponding 
 #        vectors of order L as R_L and Y_L, respectively. Then R_L = Ctran(L) * Y_L.
 #        This suggests that the "D-matrix" for the Polynomials4ML rSH is Ctran(l) * D(l) * Ctran(L)', 
-#        where D, the D-matrix for cSH. This inspires the following new CG coefficients.
+#        where D, the D-matrix for cSH. This inspires the following new CG recursion.
 #
 
 ClebschGordan(T=Float64) =
@@ -442,9 +439,10 @@ function __compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_new{L, T}}, ll, Mll
 		# allocate the right number of vectors to store basis function coeffs
 		cc = [ Vector{TCC}(undef, lenMll) for _=1:numcc ]
 		for (im, mm) in enumerate(Mll) # loop over possible indices
-			fil = coco_filter_new
 			if T == Float64
 				fil = coco_filter
+			elseif T == ComplexF64
+				fil = coco_filter_new
 			end
 			if !fil(_ValL(A), ll, mm, kk)
 				cc00 = zeros(TP, length(cc))::TA
