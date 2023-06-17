@@ -3,7 +3,10 @@ module O3
 using StaticArrays, SparseArrays
 using LinearAlgebra: norm, rank, svd, Diagonal, tr
 
-export ClebschGordan, Rot3DCoeffs
+# using Polynomials4ML: RYlmBasis
+# using Polynomials4ML
+
+export ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_new
 
 
 # ------------------- recursion details for different Ls 
@@ -19,9 +22,17 @@ coco_init(::Val{0}, T, l, m, μ) = (
 
 coco_zeros(::Val{0}, T, ll, mm, kk) = complex(T(0))
 
+## NOTE: for rSH, we can enforce sum(mm) == 0 but for cSH this is not the case. 
+#        We need a new filter, which is for now a little bit rough. The exact 
+#        condition now shall be "there exist {t_i}_i", such that \sum (-1)^(t_i)*mm_i = 0
+
 coco_filter(::Val{0}, ll, mm) = iseven(sum(ll)) && (sum(mm) == 0)
 
 coco_filter(::Val{0}, ll, mm, kk) = iseven(sum(ll)) && (sum(mm) == sum(kk) == 0)
+
+coco_filter_new(::Val{0}, ll, mm) = iseven(sum(ll))#  && (sum(mm) == 0)
+
+coco_filter_new(::Val{0}, ll, mm, kk) = iseven(sum(ll))#  && (sum(mm) == sum(kk) == 0)
 
 coco_dot(u1::Number, u2::Number) = u1' * u2
 
@@ -41,18 +52,12 @@ struct Rot3DCoeffs{L, T}
    cg::ClebschGordan{T}
 end
 
-_ValL(::Rot3DCoeffs{L}) where {L} = Val{L}() 
-
-struct ClebschGordan_new{T}
-	vals::Dict{Tuple{Int, Int, Int, Int, Int, Int}, T}
-end
-
 struct Rot3DCoeffs_new{L, T}
    vals::Vector{Dict}      # val[N] = coeffs for correlation order N
-   cg::ClebschGordan_new{T}
+   cg::ClebschGordan{T}
 end
 
-_ValL(::Rot3DCoeffs_new{L}) where {L} = Val{L}() 
+_ValL(::Union{Rot3DCoeffs{L},Rot3DCoeffs_new{L}}) where {L} = Val{L}() 
 
 # -----------------------------------
 # iterating over an m collection
@@ -70,8 +75,9 @@ end
 _getL(::MRange{L}) where {L} = L 
 _ValL(::MRange{L}) where {L} = Val{L}()
 
+## TODO: for rSH and cSH, the filter shall not be the same...
 Base.length(mr::MRange) =
-		sum(mt -> coco_filter(_ValL(mr), mr.ll, _mvec(mt)), mr.cartrg)
+		sum(mt -> coco_filter_new(_ValL(mr), mr.ll, _mvec(mt)), mr.cartrg)
 
 """
 Given an l-vector `ll` iterate over all combinations of `mm` vectors  of
@@ -192,29 +198,9 @@ Ctran(l::Int64) = sparse(Matrix{ComplexF64}([ Ctran(l,m,μ) for m = -l:l, μ = -
 #        This suggests that the "D-matrix" for the Polynomials4ML rSH is Ctran(l) * D(l) * Ctran(L)', 
 #        where D, the D-matrix for cSH. This inspires the following new CG coefficients.
 #
-#  TODO: We need a far more accurate evaluation for this new CG coefficients!
-
-function clebschgordan_new(j1, m1, j2, m2, J, M, T=ComplexF64)
-	cg = 0
-	μset = unique([M,-M])
-	m1set = unique([m1,-m1])
-	m2set = unique([m2,-m2])
-	for mu in μset
-		for p in m1set
-			for q in m2set
-				cg += Ctran(J,M,mu) * Ctran(J,m1,p) * Ctran(J,m2,q) * clebschgordan(j1, p, j2, q, J, mu, T)
-			end
-		end
-	end
-	return cg
-end
-
 
 ClebschGordan(T=Float64) =
 	ClebschGordan{T}(Dict{Tuple{Int,Int,Int,Int,Int,Int}, T}())
-	
-ClebschGordan_new(T=ComplexF64) =
-	ClebschGordan_new{T}(Dict{Tuple{Int,Int,Int,Int,Int,Int}, T}())
 
 _cg_key(j1, m1, j2, m2, J, M) = (j1, m1, j2, m2, J, M)
 
@@ -231,20 +217,6 @@ function (cg::ClebschGordan{T})(j1, m1, j2, m2, J, M) where {T}
 	return val
 end
 
-function (cg::ClebschGordan_new{T})(j1, m1, j2, m2, J, M) where {T}
-	if !cg_conditions(j1,m1, j2,m2, J,M)
-		return zero(T)
-	end
-	key = _cg_key(j1, m1, j2, m2, J, M)
-	if haskey(cg.vals, key)
-		return cg.vals[key]
-	end
-	val = clebschgordan_new(j1, m1, j2, m2, J, M, T)
-	cg.vals[key] = val
-	return val
-end
-
-
 # ----------------------------------------------------------------------
 #     Rot3DCoeffs code: generalized cg coefficients
 #
@@ -259,7 +231,7 @@ dicttype(::Val{N}, TP) where {N} =
 
 Rot3DCoeffs(L, T=Float64) = Rot3DCoeffs{L, T}(Dict[], ClebschGordan(T))
 
-Rot3DCoeffs_new(L, T=ComplexF64) = Rot3DCoeffs_new{L, T}(Dict[], ClebschGordan_new(T))
+Rot3DCoeffs_new(L, T=ComplexF64) = Rot3DCoeffs_new{L, T}(Dict[], ClebschGordan(T))
 
 function get_vals(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_new{L, T}}, valN::Val{N}) where {L, T,N}
 	# make up an ll, kk, mm and compute a dummy coupling coeff
@@ -303,7 +275,7 @@ end
 		coco_init(_ValL(A), T, ll[1], mm[1], kk[1])
 
 
-function _compute_val(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_new{L, T}}, ll::StaticVector{N},
+function _compute_val(A::Rot3DCoeffs{L, T}, ll::StaticVector{N},
                                          mm::StaticVector{N},
                                          kk::StaticVector{N}) where {L, T, N}
 	val = coco_zeros(_ValL(A), T, ll, mm, kk)
@@ -335,6 +307,71 @@ function _compute_val(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_new{L, T}}, ll::Sta
 		end
    end
    return val
+end
+
+function _compute_val(A::Rot3DCoeffs_new{L, T}, ll::StaticVector{N},
+                                         mm::StaticVector{N},
+                                         kk::StaticVector{N}) where {L, T, N}
+	val = coco_zeros(_ValL(A), T, ll, mm, kk)
+	TV = typeof(val)
+
+	tmp = zero(MVector{N-1, Int})
+
+	function _get_pp(aa, ap)
+		for i = 1:N-2
+			@inbounds tmp[i] = aa[i]
+		end
+		tmp[N-1] = ap
+		return SVector(tmp)
+	end
+	
+	set(m) = unique([m,-m])
+	## TODO: the following two functions can be combined, but not for now
+	function ntset(m1,k1,m2,k2)
+		temp = Iterators.product(set(m1),set(k1),set(m2),set(k2)) |> collect
+		return [ temp[i] for i = 1:length(temp) ]
+	end
+	
+	function pqset(n,t)
+		temp = Iterators.product(set(n),set(t)) |> collect
+		return [ temp[i] for i = 1:length(temp) ]
+	end
+	
+	function const1(m1,k1,m2,k2,n1,t1,n2,t2)
+		lmax = maximum([m1,k1,m2,k2,n1,t1,n2,t2])
+		return Ctran(lmax,m1,n1) * Ctran(lmax,k1,t1)' * Ctran(lmax,m2,n2) * Ctran(lmax,k2,t2)'
+	end
+	
+	function const2(n,t,p,q)
+		lmax = maximum([n,p,t,q])
+		return Ctran(lmax,p,n)' * Ctran(lmax,q,t)
+	end
+	
+	jmin = abs(ll[N-1]-ll[N])
+	# jmin = maximum( ( abs(ll[N-1]-ll[N]),
+	#			         abs(kk[N-1]+kk[N]),
+	#					   abs(mm[N-1]+mm[N]) ) )
+   	jmax = ll[N-1]+ll[N]
+   	for j = jmin:jmax
+	   	for (n1,t1,n2,t2) in ntset(mm[N-1],kk[N-1],mm[N],kk[N])
+			cgk = A.cg(ll[N-1], t1, ll[N], t2, j, t1+t2)
+			cgm = A.cg(ll[N-1], n1, ll[N], n2, j, n1+n2)
+			c1 = cgk * cgm * const1(mm[N-1],kk[N-1],mm[N],kk[N],n1,t1,n2,t2)
+			if c1 != 0
+				for (p,q) in pqset(n1+n2,t1+t2)
+					llpp = _get_pp(ll, j) # SVector(llp..., j)
+					mmpp = _get_pp(mm, p) # SVector(mmp..., mm[N-1]+mm[N])
+					kkpp = _get_pp(kk, q) # SVector(kkp..., kk[N-1]+kk[N])
+					a = A(llpp, mmpp, kkpp)::TV
+					c2 = const2(n1+n2,t1+t2,p,q)
+					if c2 != 0 && abs(p) ≤ j && abs(q) ≤ j
+						val += c1 * c2 * a
+					end
+				end
+			end
+   		end
+	end
+   	return val
 end
 
 # ----------------------------------------------------------------------
@@ -405,7 +442,11 @@ function __compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_new{L, T}}, ll, Mll
 		# allocate the right number of vectors to store basis function coeffs
 		cc = [ Vector{TCC}(undef, lenMll) for _=1:numcc ]
 		for (im, mm) in enumerate(Mll) # loop over possible indices
-			if !coco_filter(_ValL(A), ll, mm, kk)
+			fil = coco_filter_new
+			if T == Float64
+				fil = coco_filter
+			end
+			if !fil(_ValL(A), ll, mm, kk)
 				cc00 = zeros(TP, length(cc))::TA
 				__into_cc!(cc, cc00, im)
 			else
