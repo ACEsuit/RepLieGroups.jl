@@ -167,7 +167,7 @@ println()
 cgen = Rot3DCoeffs(0)
 maxl = [0, 7, 5, 3, 2]
 for ν = 2:5
-   @info("Testing invariance of coupled rSH based basis: L = 0, ν = $ν")
+   @info("Testing invariance of coupled cSH based basis: L = 0, ν = $ν")
    for ntest = 1:(200 ÷ ν)
       ll = rand(0:maxl[ν], ν)
       if !iseven(sum(ll)); continue; end 

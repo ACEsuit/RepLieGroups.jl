@@ -97,7 +97,8 @@ function Base.iterate(mr::MRange, idx::Integer=0)
 			return nothing
 		end
 		mm = _mvec(mr.cartrg[idx])
-		if coco_filter(_ValL(mr), mr.ll, mm)
+		## NOTE: let's use coco_filter_new for now and we can seek for the unification later.
+		if coco_filter_new(_ValL(mr), mr.ll, mm)
 			return mm, idx
 		end
 	end
@@ -439,12 +440,8 @@ function __compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_new{L, T}}, ll, Mll
 		# allocate the right number of vectors to store basis function coeffs
 		cc = [ Vector{TCC}(undef, lenMll) for _=1:numcc ]
 		for (im, mm) in enumerate(Mll) # loop over possible indices
-			if T == Float64
-				fil = coco_filter
-			elseif T == ComplexF64
-				fil = coco_filter_new
-			end
-			if !fil(_ValL(A), ll, mm, kk)
+			## NOTE: Let's use coco_filter_new for now, though it is a bit slower...
+			if !coco_filter_new(_ValL(A), ll, mm, kk)
 				cc00 = zeros(TP, length(cc))::TA
 				__into_cc!(cc, cc00, im)
 			else
