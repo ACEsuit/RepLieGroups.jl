@@ -20,16 +20,26 @@ coco_init(::Val{0}, T, l, m, μ) = (
 coco_zeros(::Val{0}, T, ll, mm, kk) = complex(T(0))
 
 ## NOTE: for rSH, we can enforce sum(mm) == 0 but for cSH this is not the case. 
-#        We need a new filter, which is for now a little bit rough. The exact 
-#        condition now shall be "there exist {t_i}_i", such that \sum (-1)^(t_i)*mm_i = 0
+#        We need a new filter, which is "there exist {t_i}_i", such that ∑_i (-1)^(t_i)*mm_i = 0
 
 coco_filter(::Val{0}, ll, mm) = iseven(sum(ll)) && (sum(mm) == 0)
 
 coco_filter(::Val{0}, ll, mm, kk) = iseven(sum(ll)) && (sum(mm) == sum(kk) == 0)
 
-coco_filter_new(::Val{0}, ll, mm) = iseven(sum(ll))#  && (sum(mm) == 0)
+function mm_filter(mm)
+	set(m) = unique([m,-m])
+	mmset = Iterators.product([set(mm[i]) for i = 1:length(mm)]...) |> collect
+	for (i,m) in enumerate(mmset)
+		if sum(m) == 0
+			return true
+		end
+	end
+	return false
+end
 
-coco_filter_new(::Val{0}, ll, mm, kk) = iseven(sum(ll))#  && (sum(mm) == sum(kk) == 0)
+coco_filter_new(::Val{0}, ll, mm) = iseven(sum(ll)) && mm_filter(mm)
+
+coco_filter_new(::Val{0}, ll, mm, kk) = iseven(sum(ll)) && mm_filter(mm) && mm_filter(kk)
 
 coco_dot(u1::Number, u2::Number) = u1' * u2
 
