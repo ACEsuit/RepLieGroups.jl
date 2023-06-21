@@ -9,6 +9,7 @@ export ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_real
 # ------------------- recursion details for different Ls 
 
 # Val{0} stands for L = 0 so invariants, let's focus on that first. 
+# TODO: Time to "import" the codes for larger L.
 
 coco_type(::Val{0}, T::Type{<: Number}) = T 
 
