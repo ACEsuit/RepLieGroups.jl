@@ -6,4 +6,3 @@ using Test
     @testset "O3-ClebschGordan" begin include("test_obsolete_cg.jl"); end
     @testset "O3" begin include("test_obsolete_o3.jl"); end
 end
-
