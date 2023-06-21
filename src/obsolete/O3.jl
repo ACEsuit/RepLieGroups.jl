@@ -3,7 +3,7 @@ module O3
 using StaticArrays, SparseArrays
 using LinearAlgebra: norm, rank, svd, Diagonal, tr
 
-export ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_new
+export ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_real
 
 
 # ------------------- recursion details for different Ls 
@@ -59,12 +59,12 @@ struct Rot3DCoeffs{L, T}
    cg::ClebschGordan{T}
 end
 
-struct Rot3DCoeffs_new{L, T}
+struct Rot3DCoeffs_real{L, T}
    vals::Vector{Dict}      # val[N] = coeffs for correlation order N
    cg::ClebschGordan{T}
 end
 
-_ValL(::Union{Rot3DCoeffs{L},Rot3DCoeffs_new{L}}) where {L} = Val{L}() 
+_ValL(::Union{Rot3DCoeffs{L},Rot3DCoeffs_real{L}}) where {L} = Val{L}() 
 
 # -----------------------------------
 # iterating over an m collection
@@ -239,9 +239,9 @@ dicttype(::Val{N}, TP) where {N} =
 
 Rot3DCoeffs(L, T=Float64) = Rot3DCoeffs{L, T}(Dict[], ClebschGordan(T))
 
-Rot3DCoeffs_new(L, T=ComplexF64) = Rot3DCoeffs_new{L, T}(Dict[], ClebschGordan(T))
+Rot3DCoeffs_real(L, T=ComplexF64) = Rot3DCoeffs_real{L, T}(Dict[], ClebschGordan(T))
 
-function get_vals(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_new{L, T}}, valN::Val{N}) where {L, T,N}
+function get_vals(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, valN::Val{N}) where {L, T,N}
 	# make up an ll, kk, mm and compute a dummy coupling coeff
 	ll, mm, kk = SVector(0), SVector(0), SVector(0)
 	cc0 = coco_zeros(_ValL(A), T, ll, mm, kk)
@@ -258,7 +258,7 @@ end
 _key(ll::StaticVector{N}, mm::StaticVector{N}, kk::StaticVector{N}) where {N} =
       (SVector{N, Int}(ll), SVector{N, Int}(mm), SVector{N, Int}(kk))
 
-function (A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_new{L, T}})(ll::StaticVector{N},
+function (A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}})(ll::StaticVector{N},
                              mm::StaticVector{N},
                              kk::StaticVector{N}) where {L, T, N}
    vals = get_vals(A, Val(N))  # this should infer the type!
@@ -277,7 +277,7 @@ end
 # TODO: actually this seems false; it is only one recursion step, and a bit
 #       or reshuffling should allow us to get rid of the {N = 2} case.
 
-(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_new{L, T}})(ll::StaticVector{1},
+(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}})(ll::StaticVector{1},
                  mm::StaticVector{1},
                  kk::StaticVector{1}) where {L, T} =
 		coco_init(_ValL(A), T, ll[1], mm[1], kk[1])
@@ -317,7 +317,7 @@ function _compute_val(A::Rot3DCoeffs{L, T}, ll::StaticVector{N},
    return val
 end
 
-function _compute_val(A::Rot3DCoeffs_new{L, T}, ll::StaticVector{N},
+function _compute_val(A::Rot3DCoeffs_real{L, T}, ll::StaticVector{N},
                                          mm::StaticVector{N},
                                          kk::StaticVector{N}) where {L, T, N}
 	val = coco_zeros(_ValL(A), T, ll, mm, kk)
@@ -389,7 +389,7 @@ end
 # ----------------------------------------------------------------------
 
 
-function re_basis(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_new{L, T}}, ll::SVector) where {L, T}
+function re_basis(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, ll::SVector) where {L, T}
 	TCC = coco_type(_ValL(A), T)
 	CC, Mll = compute_Al(A, ll)  # CC::Vector{Vector{...}}
 	G = [ sum( coco_dot(CC[a][i], CC[b][i]) for i = 1:length(Mll) )
@@ -408,7 +408,7 @@ end
 
 
 # function barrier
-function compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_new{L, T}}, ll::SVector) where {L, T}
+function compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, ll::SVector) where {L, T}
 	Mll = collect(_mrange(_ValL(A), ll))
    TP = coco_type(_ValL(A), T)
 	if length(Mll) == 0
@@ -421,7 +421,7 @@ end
 
 # TODO: what was TA for? Can we get rid of it via coco_type? 
 
-function __compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_new{L, T}}, ll, Mll, TP, TA) where {L, T}
+function __compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, ll, Mll, TP, TA) where {L, T}
 	lenMll = length(Mll)
 	# each element of CC will be one row of the coupling coefficients
 	TCC = coco_type(_ValL(A), T)

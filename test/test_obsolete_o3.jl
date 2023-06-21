@@ -1,7 +1,7 @@
 
 
 using Test, RepLieGroups, StaticArrays, Polynomials4ML
-using RepLieGroups.O3: ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_new, re_basis, 
+using RepLieGroups.O3: ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_real, re_basis, 
             _mrange, MRange, Ctran, clebschgordan
 using Polynomials4ML: CYlmBasis, index_y, RYlmBasis 
 using Polynomials4ML.Testing: print_tf
@@ -178,14 +178,14 @@ for ν = 2:5
       X = [ (@SVector rand(3)) for i in 1:length(ll) ]
       Q = rand_rot() 
       B1 = eval_basis(ll, Ure, Mll, X; real = false)
-      B2 = eval_basis(ll, Ure, Mll, Ref(Q') .* X; real = false)
+      B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; real = false)
       print_tf(@test B1 ≈ B2)
    end
    println()
 end
 
 @info("Invariance of coupled rSH based basis")  
-cgen = Rot3DCoeffs_new(0)
+cgen = Rot3DCoeffs_real(0)
 maxl = [0, 7, 5, 3, 2]
 for ν = 2:5
    @info("Testing invariance of coupled rSH based basis: L = 0, ν = $ν")
@@ -199,7 +199,7 @@ for ν = 2:5
       X = [ (@SVector rand(3)) for i in 1:length(ll) ]
       Q = rand_rot() 
       B1 = eval_basis(ll, Ure, Mll, X; real = true)
-      B2 = eval_basis(ll, Ure, Mll, Ref(Q') .* X; real = true)
+      B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; real = true)
       print_tf(@test B1 ≈ B2)
    end
    println()
