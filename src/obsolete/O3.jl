@@ -37,9 +37,9 @@ function mm_filter(mm)
 	return false
 end
 
-coco_filter_new(::Val{0}, ll, mm) = iseven(sum(ll)) && mm_filter(mm)
+coco_filter_real(::Val{0}, ll, mm) = iseven(sum(ll)) && mm_filter(mm)
 
-coco_filter_new(::Val{0}, ll, mm, kk) = iseven(sum(ll)) && mm_filter(mm) && mm_filter(kk)
+coco_filter_real(::Val{0}, ll, mm, kk) = iseven(sum(ll)) && mm_filter(mm) && mm_filter(kk)
 
 coco_dot(u1::Number, u2::Number) = u1' * u2
 
@@ -83,18 +83,22 @@ _getL(::MRange{L}) where {L} = L
 _ValL(::MRange{L}) where {L} = Val{L}()
 
 ## TODO: for rSH and cSH, the filter shall not be the same...
-Base.length(mr::MRange) =
-		sum(mt -> coco_filter_new(_ValL(mr), mr.ll, _mvec(mt)), mr.cartrg)
+Base.length(mr::MRange) = length(mr.cartrg)
 
 """
 Given an l-vector `ll` iterate over all combinations of `mm` vectors  of
 the same length such that `sum(mm) == 0`
 """
+Base.sum(cc::CartesianIndex) = sum(cc.I)
 _mrange(L::Integer, ll) = _mrange(Val{L}(), ll)
 
-function _mrange(::Val{L}, ll) where {L}
+function _mrange(::Val{L}, ll; ll_filter = ll -> iseven(sum(ll)), mm_filter = mm -> abs(sum(mm)) <= L) where {L}
+   if !ll_filter(ll)
+	   return MRange{L, N, Tuple}(ll, ())
+   end
    N = length(ll) 
    cartrg = CartesianIndices(ntuple(i -> -ll[i]:ll[i], length(ll)))
+   cartrg = cartrg[findall(x -> x==1, mm_filter.(cartrg))]
 	return MRange{L, N, typeof(cartrg)}(ll, cartrg)
 end
 
@@ -103,19 +107,10 @@ end
 function Base.iterate(mr::MRange, idx::Integer=0)
 	while true
 		idx += 1
-		if idx > length(mr.cartrg)
-			return nothing
-		end
-		mm = _mvec(mr.cartrg[idx])
-		## NOTE: let's use coco_filter_new for now and we can seek for the unification later.
-		if coco_filter_new(_ValL(mr), mr.ll, mm)
-			return mm, idx
-		end
+		return idx > length(mr.cartrg) ? nothing : (_mvec(mr.cartrg[idx]), idx)
 	end
 	error("we should never be here")
 end
-
-
 
 
 # ----------------------------------------------------------------------
@@ -409,7 +404,14 @@ end
 
 # function barrier
 function compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, ll::SVector) where {L, T}
-	Mll = collect(_mrange(_ValL(A), ll))
+	if typeof(A) <: Rot3DCoeffs
+		fil = mm -> abs(sum(mm)) <= L
+	elseif typeof(A) <: Rot3DCoeffs_real
+		fil = mm_filter
+	else 
+		error("Not implemented yet")
+	end
+	Mll = collect(_mrange(_ValL(A), ll; mm_filter = fil))
    TP = coco_type(_ValL(A), T)
 	if length(Mll) == 0
 		return Vector{TP}[], Mll
@@ -421,7 +423,15 @@ end
 
 # TODO: what was TA for? Can we get rid of it via coco_type? 
 
-function __compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, ll, Mll, TP, TA) where {L, T}
+function __compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, ll, Mll, TP, TA) where {L, T}	
+	if typeof(A) <: Rot3DCoeffs
+		fil = coco_filter
+	elseif typeof(A) <: Rot3DCoeffs_real
+		fil = coco_filter_real
+	else 
+		error("Not implemented yet")
+	end
+	
 	lenMll = length(Mll)
 	# each element of CC will be one row of the coupling coefficients
 	TCC = coco_type(_ValL(A), T)
@@ -450,8 +460,7 @@ function __compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, ll, Ml
 		# allocate the right number of vectors to store basis function coeffs
 		cc = [ Vector{TCC}(undef, lenMll) for _=1:numcc ]
 		for (im, mm) in enumerate(Mll) # loop over possible indices
-			## NOTE: Let's use coco_filter_new for now, though it is a bit slower...
-			if !coco_filter_new(_ValL(A), ll, mm, kk)
+			if !fil(_ValL(A), ll, mm, kk)
 				cc00 = zeros(TP, length(cc))::TA
 				__into_cc!(cc, cc00, im)
 			else
