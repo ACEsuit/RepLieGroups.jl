@@ -92,7 +92,7 @@ the same length such that `sum(mm) == 0`
 Base.sum(cc::CartesianIndex) = sum(cc.I)
 _mrange(L::Integer, ll) = _mrange(Val{L}(), ll)
 
-function _mrange(::Val{L}, ll; ll_filter = ll -> iseven(sum(ll)), mm_filter = mm -> abs(sum(mm)) <= L) where {L}
+function _mrange(::Val{L}, ll; ll_filter = ll -> iseven(sum(ll)+L), mm_filter = mm -> abs(sum(mm)) <= L) where {L}
    if !ll_filter(ll)
 	   return MRange{L, N, Tuple}(ll, ())
    end
