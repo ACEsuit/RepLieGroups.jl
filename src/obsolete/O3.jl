@@ -1,51 +1,11 @@
 module O3
 
 using StaticArrays, SparseArrays
-using LinearAlgebra: norm, rank, svd, Diagonal, tr
+using LinearAlgebra: norm, rank, svd, Diagonal, tr, dot
 
 export ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_real
 
-
-# ------------------- recursion details for different Ls 
-
-# Val{0} stands for L = 0 so invariants, let's focus on that first. 
-# TODO: Time to "import" the codes for larger L.
-
-coco_type(::Val{0}, T::Type{<: Number}) = T 
-
-coco_init(::Val{0}, T) = [ complex(T(1));; ]
-
-coco_init(::Val{0}, T, l, m, μ) = (
-                  l == m == μ == 0 ? complex(T(1)) : complex(T(0))  )
-
-coco_zeros(::Val{0}, T, ll, mm, kk) = complex(T(0))
-
-## NOTE: for rSH, we can enforce sum(mm) == 0 but for cSH this is not the case. 
-#        We need a new filter, which is "there exist {t_i}_i", such that ∑_i (-1)^(t_i)*mm_i = 0
-
-coco_filter(::Val{0}, ll, mm) = iseven(sum(ll)) && (sum(mm) == 0)
-
-coco_filter(::Val{0}, ll, mm, kk) = iseven(sum(ll)) && (sum(mm) == sum(kk) == 0)
-
-function mm_filter(mm)
-	set(m) = unique([m,-m])
-	mmset = Iterators.product([set(mm[i]) for i = 1:length(mm)]...) |> collect
-	for (i,m) in enumerate(mmset)
-		if sum(m) == 0
-			return true
-		end
-	end
-	return false
-end
-
-coco_filter_new(::Val{0}, ll, mm) = iseven(sum(ll)) && mm_filter(mm)
-
-coco_filter_new(::Val{0}, ll, mm, kk) = iseven(sum(ll)) && mm_filter(mm) && mm_filter(kk)
-
-coco_dot(u1::Number, u2::Number) = u1' * u2
-
 # -------------------
-
 
 """
 `ClebschGordan: ` storing precomputed Clebsch-Gordan coefficients; see
@@ -67,6 +27,97 @@ end
 
 _ValL(::Union{Rot3DCoeffs{L},Rot3DCoeffs_real{L}}) where {L} = Val{L}() 
 
+# -------------------  Functions hacked from ACE which will be used to construct CCs for L>0
+"""
+Index of entries in D matrix (sign included)
+"""
+struct D_Index
+	sign::Int64
+	μ::Int64
+	m::Int64
+end
+
+"""
+auxiliary matrix - indices for D matrix
+"""
+wigner_D_indices(L::Integer) = (   @assert L >= 0;
+		[ D_Index(1, i - 1 - L, j - 1 - L) for j = 1:2*L+1, i = 1:2*L+1] )
+
+Base.adjoint(idx::D_Index) = D_Index( (-1)^(idx.μ+idx.m), - idx.μ, - idx.m)
+
+function vec_cou_coe(rotc::Union{Rot3DCoeffs, Rot3DCoeffs_real},
+					      l::Integer, m::Integer, μ::Integer,
+					      L::Integer, t::Integer)
+	@assert 0 < t <= 2L+1
+	D = wigner_D_indices(L)'   # Dt = D[:,t]  -->  # D^* ⋅ e^t
+	LL = SA[l, L]
+	Z = ntuple(i -> begin
+			cc = (rotc(LL, SA[μ, D[i, t].m], SA[m, D[i, t].μ]))
+			D[i, t].sign * cc
+				end, 2*L+1)
+	# Z = [ D[i, t].sign * rotc(LL, SA[μ, D[i, t].m], SA[m, D[i, t].μ]) for i = 1:2L+1 ]
+	# Z = [ D[i, t].sign * rotc(LL, SA[m, D[i, t].μ], SA[m, D[i, t].μ]) for i = 1:2L+1 ]
+	return SVector(Z)
+end
+
+function _select_t(L, l, M, K)
+	D = wigner_D_indices(L)'
+	tret = -1; numt = 0
+	for t = 1:2L+1
+		prodμt = prod( (D[i, t].μ + M) for i in 1:2L+1)  # avoid more allocations
+		prodmt = prod( (D[i, t].m + K) for i in 1:2L+1)
+		if prodμt == prodmt == 0
+			tret = t; numt += 1
+		end
+	end
+	# We assumed that there is only one coefficient; this will warn us if it fails
+	@assert numt == 1
+	return tret
+end
+
+# ------------------- recursion details for different Ls 
+
+# Val{0} stands for L = 0 so invariants, let's focus on that first. 
+# Now it has been extended to general L.
+coco_type(::Val{L}, T::Type{<: Number}) where L = L == 0 ? T : SVector{2L+1,T} 
+
+coco_init(::Val{L}, T) where L = L == 0 ? [ complex(T(1));; ] : []
+
+coco_init(::Val{L}, T, l, m, μ) where L = L == 0 ? (
+                  l == m == μ == 0 ? complex(T(1)) : complex(T(0))  ) : ( vec_cou_coe(Rot3DCoeffs(0), l, m, μ, L, _select_t(L, l, m, μ)) )
+
+coco_zeros(::Val{L}, T, ll, mm, kk) where L = L == 0 ? complex(T(0)) : @SVector zeros(T,2L+1)
+
+## NOTE: for rSH, we can enforce sum(mm) == 0 but for cSH this is not the case. 
+#        We need a new filter, which is "there exist {t_i}_i", such that ∑_i (-1)^(t_i)*mm_i = 0
+
+coco_filter(::Val{L}, ll, mm) where L = iseven(sum(ll)+L) && abs(sum(mm)) <= L
+
+coco_filter(::Val{L}, ll, mm, kk) where L = iseven(sum(ll)+L) && abs(sum(mm)) <= L && abs(sum(kk)) <= L
+
+function mm_filter(mm,L=0)
+	# TODO: Extend this to larger L...
+	if L ≠ 0
+		error("Not implemented yet!")
+	end
+	set(m) = unique([m,-m])
+	mmset = Iterators.product([set(mm[i]) for i = 1:length(mm)]...) |> collect
+	for (i,m) in enumerate(mmset)
+		if sum(m) == 0 # Was is simply "... <= L" for larger L??
+			return true
+		end
+	end
+	return false
+end
+
+coco_filter_real(::Val{L}, ll, mm) where L = iseven(sum(ll)+L) && mm_filter(mm,L)
+
+coco_filter_real(::Val{L}, ll, mm, kk) where L = iseven(sum(ll)+L) && mm_filter(mm,L) && mm_filter(kk,L)
+
+coco_dot(u1::Number, u2::Number) = u1' * u2
+
+coco_dot(u1::SVector{L,T}, u2::SVector{L,T}) where {L,T} = dot(u1, u2)
+
 # -----------------------------------
 # iterating over an m collection
 # -----------------------------------
@@ -84,18 +135,22 @@ _getL(::MRange{L}) where {L} = L
 _ValL(::MRange{L}) where {L} = Val{L}()
 
 ## TODO: for rSH and cSH, the filter shall not be the same...
-Base.length(mr::MRange) =
-		sum(mt -> coco_filter_new(_ValL(mr), mr.ll, _mvec(mt)), mr.cartrg)
+Base.length(mr::MRange) = length(mr.cartrg)
+Base.sum(cc::CartesianIndex) = sum(cc.I)
 
 """
 Given an l-vector `ll` iterate over all combinations of `mm` vectors  of
-the same length such that `sum(mm) == 0`
+the same length such that `sum(mm) == 0` (or such that mm is feasible, for larger L)
 """
 _mrange(L::Integer, ll) = _mrange(Val{L}(), ll)
 
-function _mrange(::Val{L}, ll) where {L}
+function _mrange(::Val{L}, ll; ll_filter = ll -> iseven(sum(ll)+L), mm_filter = mm -> abs(sum(mm)) <= L) where {L}
+   if !ll_filter(ll)
+	   return MRange{L, length(ll), Tuple}(ll, ())
+   end
    N = length(ll) 
    cartrg = CartesianIndices(ntuple(i -> -ll[i]:ll[i], length(ll)))
+   cartrg = cartrg[findall(x -> x==1, mm_filter.(cartrg))]
 	return MRange{L, N, typeof(cartrg)}(ll, cartrg)
 end
 
@@ -104,20 +159,10 @@ end
 function Base.iterate(mr::MRange, idx::Integer=0)
 	while true
 		idx += 1
-		if idx > length(mr.cartrg)
-			return nothing
-		end
-		mm = _mvec(mr.cartrg[idx])
-		## NOTE: let's use coco_filter_new for now and we can seek for the unification later.
-		if coco_filter_new(_ValL(mr), mr.ll, mm)
-			return mm, idx
-		end
+		return idx > length(mr.cartrg) ? nothing : (_mvec(mr.cartrg[idx]), idx)
 	end
 	error("we should never be here")
 end
-
-
-
 
 # ----------------------------------------------------------------------
 #     ClebschGordan code
@@ -311,7 +356,7 @@ function _compute_val(A::Rot3DCoeffs{L, T}, ll::StaticVector{N},
 			llpp = _get_pp(ll, j) # SVector(llp..., j)
 			mmpp = _get_pp(mm, mm[N-1]+mm[N]) # SVector(mmp..., mm[N-1]+mm[N])
 			kkpp = _get_pp(kk, kk[N-1]+kk[N]) # SVector(kkp..., kk[N-1]+kk[N])
-			a = A(llpp, mmpp, kkpp)::TV
+			a = TV(A(llpp, mmpp, kkpp))::TV
 			val += cgk * cgm * a
 		end
    end
@@ -410,7 +455,14 @@ end
 
 # function barrier
 function compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, ll::SVector) where {L, T}
-	Mll = collect(_mrange(_ValL(A), ll))
+	if typeof(A) <: Rot3DCoeffs
+		fil = mm -> abs(sum(mm)) <= L
+	elseif typeof(A) <: Rot3DCoeffs_real
+		fil = mm_filter
+	else 
+		error("Not implemented yet")
+	end
+	Mll = collect(_mrange(_ValL(A), ll; mm_filter = fil))
    TP = coco_type(_ValL(A), T)
 	if length(Mll) == 0
 		return Vector{TP}[], Mll
@@ -422,7 +474,15 @@ end
 
 # TODO: what was TA for? Can we get rid of it via coco_type? 
 
-function __compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, ll, Mll, TP, TA) where {L, T}
+function __compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, ll, Mll, TP, TA) where {L, T}	
+	if typeof(A) <: Rot3DCoeffs
+		fil = coco_filter
+	elseif typeof(A) <: Rot3DCoeffs_real
+		fil = coco_filter_real
+	else 
+		error("Not implemented yet")
+	end
+	
 	lenMll = length(Mll)
 	# each element of CC will be one row of the coupling coefficients
 	TCC = coco_type(_ValL(A), T)
@@ -433,26 +493,26 @@ function __compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, ll, Ml
 		@assert length(cc) == 1
 		cc[1][im] = cc0
 	end
-	function __into_cc!(cc, cc0::AbstractVector, im)
-		@assert length(cc) == length(cc0)
-		for p = 1:length(cc)
-			cc[p][im] = cc0[p]
-		end
-	end
+	# NOTE: We won't have this in the current setting???
+	# function __into_cc!(cc, cc0::AbstractVector, im)
+	# 	@assert length(cc) == length(cc0)
+	# 	for p = 1:length(cc)
+	# 		cc[p][im] = cc0[p]
+	# 	end
+	# end
 
 	for (ik, kk) in enumerate(Mll)  # loop over possible basis functions
 		# do a dummy calculation to determine how many coefficients we will get
 		cc0 = A(ll, Mll[1], kk)::TA
-      @assert cc0 isa Number 
-      numcc = 1 
+      @assert length(cc0) == 2L+1 
+      numcc = 1
       # the assert above replaced the following line; to be replaced with 
       #     the suitable generalisation to L > 0 
 		# numcc = (cc0 isa AbstractProperty ? 1 : length(cc0))
 		# allocate the right number of vectors to store basis function coeffs
 		cc = [ Vector{TCC}(undef, lenMll) for _=1:numcc ]
 		for (im, mm) in enumerate(Mll) # loop over possible indices
-			## NOTE: Let's use coco_filter_new for now, though it is a bit slower...
-			if !coco_filter_new(_ValL(A), ll, mm, kk)
+			if !fil(_ValL(A), ll, mm, kk)
 				cc00 = zeros(TP, length(cc))::TA
 				__into_cc!(cc, cc00, im)
 			else
