@@ -103,6 +103,7 @@ println()
 Lmax = 4
 basis = RYlmBasis(Lmax)
 for ntest = 1:30
+   local θ
    x = @SVector rand(3)
    θ = rand() * 2pi
    Q = RotXYZ(0, 0, θ)
