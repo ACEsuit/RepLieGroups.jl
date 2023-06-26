@@ -14,10 +14,9 @@ function eval_basis(ll, Ure, Mll, X; Real = true)
    @assert length(X) == length(ll)
    @assert all(length.(X) .== 3) 
 
-   # TV = promote_type(eltype(Ure), eltype(X[1]))
    # NOTE: It seems that we will not go beyond vector valued functions in this package...?
-   TV = Real ? real : complex
-   val = TV(zeros(typeof(Ure[1]), size(Ure,1)))
+   _convert = Real ? real : identity
+   val = _convert(zeros(typeof(Ure[1]), size(Ure,1)))
    
    if Real
       basis = RYlmBasis(sum(ll))
@@ -29,7 +28,7 @@ function eval_basis(ll, Ure, Mll, X; Real = true)
    for (i, mm) in enumerate(Mll)
       prod_Ylm = prod( Ylm[j][index_y(l, m)] 
                        for (j, (l, m)) in enumerate(zip(ll, mm)) )
-      val .+= TV(Ure[:,i] * prod_Ylm)
+      val .+= _convert(Ure[:,i] * prod_Ylm)
    end
 
    return val 
@@ -173,6 +172,7 @@ for L = 0:2
    for ν = 2:5
       @info("Testing equivariance of coupled cSH based basis: L = $L, ν = $ν")
       for ntest = 1:(200 ÷ ν)
+         local θ
          ll = rand(0:maxl[ν], ν)
          if !iseven(sum(ll)+L); continue; end 
          ll = SVector(ll...)      
@@ -184,6 +184,7 @@ for L = 0:2
          Q = RotXYZ(0, 0, θ)
          B1 = eval_basis(ll, Ure, Mll, X; Real = false)
          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
+         # TODO: combine into a single test 
          if L == 0
             print_tf(@test norm(B1 - B2)<1e-12)
          else
@@ -196,12 +197,14 @@ for L = 0:2
 end
 
 @info("Equivariance of coupled rSH based basis")  
+# TODO: add tests for L = 1, 2, 3, 4
 for L = 0:0
    cgen = Rot3DCoeffs_real(0)
    maxl = [0, 7, 5, 3, 2]
    for ν = 2:5
       @info("Testing equivariance of coupled rSH based basis: L = $L, ν = $ν")
       for ntest = 1:(200 ÷ ν)
+         local θ
          ll = rand(0:maxl[ν], ν)
          if !iseven(sum(ll)); continue; end 
          ll = SVector(ll...)      
