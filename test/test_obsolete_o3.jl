@@ -15,7 +15,7 @@ function eval_basis(ll, Ure, Mll, X; Real = true)
    @assert all(length.(X) .== 3) 
 
    # NOTE: It seems that we will not go beyond vector valued functions in this package...?
-   _convert = Real ? real : identity
+   _convert = Real ? real : complex # identity
    val = _convert(zeros(typeof(Ure[1]), size(Ure,1)))
    
    if Real
@@ -199,14 +199,14 @@ end
 @info("Equivariance of coupled rSH based basis")  
 # TODO: add tests for L = 1, 2, 3, 4
 for L = 0:0
-   cgen = Rot3DCoeffs_real(0)
+   cgen = Rot3DCoeffs_real(L)
    maxl = [0, 7, 5, 3, 2]
    for ν = 2:5
       @info("Testing equivariance of coupled rSH based basis: L = $L, ν = $ν")
       for ntest = 1:(200 ÷ ν)
          local θ
          ll = rand(0:maxl[ν], ν)
-         if !iseven(sum(ll)); continue; end 
+         if !iseven(sum(ll)+L); continue; end 
          ll = SVector(ll...)      
          Ure, Mll = re_basis(cgen, ll)
          if size(Ure, 1) == 0; continue; end
