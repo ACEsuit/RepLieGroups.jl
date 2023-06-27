@@ -1,5 +1,7 @@
 using StaticArrays 
 
+import Base: *, +, complex, real
+
 struct SYYVector{L, N, T}  <: StaticVector{N, T}
    data::NTuple{N, T}
 end
@@ -26,3 +28,19 @@ end
       SVector(ntuple(i -> y[i+l^2], 2*l+1))
 
 Base.Tuple(y::SYYVector) = y.data 
+
+*(y::SYYVector{L,N,T1},b::T2) where {L,N,T1<:Number,T2<:Number} = 
+      SYYVector(NTuple{N,promote_type(T1,T2)}([ y.data[i] for i = 1:N ] * b))
+
++(y::SYYVector{L,N,T1},b::T2) where {L,N,T1<:Number,T2<:Number} = 
+		SYYVector(NTuple{N,promote_type(T1,T2)}([ y.data[i] for i = 1:N ] .+ b))
+
++(y1::SYYVector{L,N,T1},y2::SYYVector{L,N,T2}) where {L,N,T1<:Number,T2<:Number} = 
+		SYYVector(NTuple{N,promote_type(T1,T2)}([ y1.data[i]+y2.data[i] for i = 1:N ]))
+		
+complex(y::SYYVector{L,N,T}) where {L,N,T<:Number} = SYYVector{L,N,ComplexF64}(y.data)
+real(y::SYYVector{L,N,T}) where {L,N,T<:Number} = 
+		try SYYVector{L,N,Float64}(y.data)
+		catch
+			error("Can not convert a complex SYYVector to a real one.")
+		end

@@ -247,13 +247,38 @@ for L = 0:2
          X = [ (@SVector rand(3)) for i in 1:length(ll) ]
          θ = rand() * 2pi
          Q = RotXYZ(0, 0, θ)
-         # TODO: currently, B1 is a set of SVector, that is because SYYVector * Number -> SVector. 
-         # This should be redefined carefully, also the addition of this type. 
+
          B1 = eval_basis(ll, Ure, Mll, X; Real = false)
          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
          D = BlockDiagonal([ wignerD(l, 0, 0, θ) for l = 0:L] )
          print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
       end
       println()
+   end
+end
+
+@info("Equivariance of each 'subblock' of the cSH based LONG basis")  
+Lmax = 4
+cgen = Rot3DCoeffs_long(Lmax)
+maxl = [0, 7, 5, 3, 2]
+for ntest = 1:30
+   ν = rand(2:5)
+   ll = rand(0:maxl[ν], ν)
+   ll = SVector(ll...)      
+   Ure, Mll = re_basis(cgen, ll)
+   if size(Ure, 1) == 0; continue; end
+   
+   X = [ (@SVector rand(3)) for i in 1:length(ll) ]
+   θ = rand() * 2pi
+   Q = RotXYZ(0, 0, θ)
+   
+   B1 = eval_basis(ll, Ure, Mll, X; Real = false)
+   B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
+   
+   for l = 0:Lmax
+      B1l = [ B1[i][Val(l)] for i = 1:length(B1) ]
+      B2l = [ B2[i][Val(l)] for i = 1:length(B2) ]
+      D = wignerD(l, 0, 0, θ)
+      print_tf(@test norm(B1l - Ref(D) .* B2l)<1e-12)
    end
 end
