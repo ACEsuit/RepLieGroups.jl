@@ -18,12 +18,12 @@ for L = 0:4
    end
    println()
    
-   @info("test whether y[l,m] is as expected.")
+   @info("test whether y[(l,m)] is as expected.")
    for l = 0:L, m = -l:l
-      print_tf(@test y[l, m] == data[_lm2i(l,m)])
+      print_tf(@test y[(l,m)] == data[_lm2i(l,m)])
    end 
    for i = 1 : (L+1)^2
-      print_tf(@test y[_i2lm(i)...] == data[i]) 
+      print_tf(@test y[_i2lm(i)] == data[i]) 
    end
    println()
    
@@ -34,7 +34,3 @@ for L = 0:4
    end
    println()
 end
-
-# using StaticArrays: StaticVector
-# 
-# a = StaticVector{2,Int}([1,2])
