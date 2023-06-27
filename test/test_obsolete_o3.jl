@@ -1,12 +1,12 @@
 
 
 using Test, RepLieGroups, StaticArrays, Polynomials4ML
-using RepLieGroups.O3: ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_real, re_basis, 
-            _mrange, MRange, Ctran, clebschgordan
+using RepLieGroups.O3: ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_real, Rot3DCoeffs_long, 
+            re_basis, _mrange, MRange, Ctran, clebschgordan
 using Polynomials4ML: CYlmBasis, index_y, RYlmBasis 
 using Polynomials4ML.Testing: print_tf
 using LinearAlgebra
-using WignerD, Rotations
+using WignerD, Rotations, BlockDiagonals
 
 ##
 
@@ -223,6 +223,36 @@ for L = 0:0
             D = Ctran(L) * wignerD(L, 0, 0, θ) * Ctran(L)'
             print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
          end
+      end
+      println()
+   end
+end
+
+@info("Equivariance of coupled cSH based LONG basis")  
+for L = 0:2
+   cgen = Rot3DCoeffs_long(L)
+   maxl = [0, 7, 5, 3, 2]
+   for ν = 2:5
+      @info("Testing equivariance of coupled cSH based LONG basis: L = $L, ν = $ν")
+      for ntest = 1:(200 ÷ ν)
+         local θ
+         ll = rand(0:maxl[ν], ν)
+         if L == 0 
+            if !iseven(sum(ll)+L); continue; end 
+         end
+         ll = SVector(ll...)      
+         Ure, Mll = re_basis(cgen, ll)
+         if size(Ure, 1) == 0; continue; end
+
+         X = [ (@SVector rand(3)) for i in 1:length(ll) ]
+         θ = rand() * 2pi
+         Q = RotXYZ(0, 0, θ)
+         # TODO: currently, B1 is a set of SVector, that is because SYYVector * Number -> SVector. 
+         # This should be redefined carefully, also the addition of this type. 
+         B1 = eval_basis(ll, Ure, Mll, X; Real = false)
+         B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
+         D = BlockDiagonal([ wignerD(l, 0, 0, θ) for l = 0:L] )
+         print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
       end
       println()
    end
