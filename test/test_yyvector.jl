@@ -1,6 +1,6 @@
 
 
-using RepLieGroups: SYYVector, _lm2i
+using RepLieGroups: SYYVector, _lm2i,_i2lm
 using Test
 using Polynomials4ML.Testing: print_tf
 
@@ -22,6 +22,9 @@ for L = 0:4
    for l = 0:L, m = -l:l
       print_tf(@test y[l, m] == data[_lm2i(l,m)])
    end 
+   for i = 1 : (L+1)^2
+      print_tf(@test y[_i2lm(i)...] == data[i]) 
+   end
    println()
    
    @info("test whether y[Val(l)] is as expected.")
