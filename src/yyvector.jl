@@ -20,6 +20,7 @@ end
 @inline _i2lm(i) = ( ceil(Int,sqrt(i)) - 1, i - ceil(Int,sqrt(i))^2 + ceil(Int,sqrt(i)) - 1)::Tuple{Int,Int}
 
 @inline Base.getindex(y::SYYVector, lm::Tuple{Int,Int}) = y[_lm2i(lm[1], lm[2])]
+@inline Base.getindex(y::SYYVector, lm::NamedTuple{(:l,:m),Tuple{Int,Int}}) = y[_lm2i(lm.l, lm.m)]
 
 @inline Base.getindex(y::SYYVector, ::Val{l}) where l = 
       SVector(ntuple(i -> y[i+l^2], 2*l+1))
