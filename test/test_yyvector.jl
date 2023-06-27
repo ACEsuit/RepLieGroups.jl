@@ -1,47 +1,37 @@
-# using RepLieGroups
-# using RepLieGroups: SYYVector
 
-module Y 
 
-using StaticArrays 
+using RepLieGroups: SYYVector, _lm2i
+using Test
+using Polynomials4ML.Testing: print_tf
 
-struct SYYVector{N, T, L}  <: StaticVector{N, T}
-   data::NTuple{N, T}
+for L = 0:4
+   local data, y
+   println()
+   @info("Tests for L = $L...")
+   println()
+   data = tuple(randn((L+1)^2)...)
+   y = SYYVector(data);
+   
+   @info("Test whether y[i] is as expected.")
+   for i = 1 : (L+1)^2
+      print_tf(@test y[i] == data[i])
+   end
+   println()
+   
+   @info("test whether y[l,m] is as expected.")
+   for l = 0:L, m = -l:l
+      print_tf(@test y[l, m] == data[_lm2i(l,m)])
+   end 
+   println()
+   
+   @info("test whether y[Val(l)] is as expected.")
+   for l = 0:L
+      print_tf(@test y[Val(l)] == [data...][l^2+1:(l+1)^2])
+      print_tf(@test y[Val(l)] == y[l^2+1:(l+1)^2]) # Redundant but can serve as an "cross validation"...
+   end
+   println()
 end
 
-function SYYVector{L}(data::NTuple{N, T}) where {L, T, N}
-   @assert N == (L+1)^2
-   return SYYVector{N, T, L}(data)
-end
-
-# TODO: @boundscheck / @propagate_inbounds
-@inline Base.getindex(y::SYYVector, i::Integer) = y.data[i] 
-@inline Base.getindex(y::SYYVector, i::Int) = y.data[i] 
-
-
-@inline _lm2i(l, m) = m + l + (l*l) + 1
-
-
-@inline Base.getindex(y::SYYVector, l::Integer, m::Integer) = y[_lm2i(l, m)]
-@inline Base.getindex(y::SYYVector, l::Int, m::Int) = y[_lm2i(l, m)]
-
-@inline Base.getindex(y::SYYVector, ::Val{l}) where l = 
-      SVector(ntuple(i -> y[i+l^2], 2*l+1))
-
-Base.Tuple(y::SYYVector) = y.data 
-
-end
-
-##
-
-
-data1 = tuple(randn(4)...)
-y = Y.SYYVector{1}(data1)
-y[0, 0] == data1[1] 
-y[1, -1] == data1[2] 
-y[1, 0] == data1[3]
-y[1, 1] == data1[4]
-
-y[Val(0)] == [ data1[1],]
-y[Val(1)] == [data1...][2:4]
-
+# using StaticArrays: StaticVector
+# 
+# a = StaticVector{2,Int}([1,2])

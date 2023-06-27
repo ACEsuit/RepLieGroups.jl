@@ -56,6 +56,7 @@ cg = ClebschGordan()
 # see e.g. https://en.wikipedia.org/wiki/Clebsch–Gordan_coefficients
 # this is the magic formula that we need, on which everything else is based
 for ntest = 1:200
+      local θ
       # two random Ylm  ...
       l1, l2 = rand(1:10), rand(1:10)
       m1, m2 = rand(-l1:l1), rand(-l2:l2)
@@ -80,5 +81,3 @@ for ntest = 1:200
       print_tf((@test (p ≈ p2) || (abs(p-p2) < 1e-15)))
 end
 println()
-
-
