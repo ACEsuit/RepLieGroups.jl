@@ -60,7 +60,7 @@ end
 Lmax = 4
 basis = CYlmBasis(Lmax)
 for ntest = 1:30
-   local θ
+   local θ, Q
    x = @SVector rand(3)
    θ = rand() * 2pi
    Q = RotXYZ(0, 0, θ)
@@ -103,7 +103,7 @@ println()
 Lmax = 4
 basis = RYlmBasis(Lmax)
 for ntest = 1:30
-   local θ
+   local θ, Q
    x = @SVector rand(3)
    θ = rand() * 2pi
    Q = RotXYZ(0, 0, θ)
@@ -168,12 +168,12 @@ println()
 
 @info("Equivariance of coupled cSH based basis")  
 for L = 0:2
-   cgen = Rot3DCoeffs(L)
-   maxl = [0, 7, 5, 3, 2]
+   local cgen = Rot3DCoeffs(L)
+   local maxl = [0, 7, 5, 3, 2]
    for ν = 2:5
       @info("Testing equivariance of coupled cSH based basis: L = $L, ν = $ν")
       for ntest = 1:(200 ÷ ν)
-         local θ
+         local θ, ll, Ure, Mll, X, Q, B1, B2
          ll = rand(0:maxl[ν], ν)
          if !iseven(sum(ll)+L); continue; end 
          ll = SVector(ll...)      
@@ -205,7 +205,7 @@ for L = 0:0
    for ν = 2:5
       @info("Testing equivariance of coupled rSH based basis: L = $L, ν = $ν")
       for ntest = 1:(200 ÷ ν)
-         local θ
+         local θ, ll, Ure, Mll, X, Q, B1, B2
          ll = rand(0:maxl[ν], ν)
          if !iseven(sum(ll)+L); continue; end 
          ll = SVector(ll...)      
