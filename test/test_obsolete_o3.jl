@@ -262,6 +262,7 @@ Lmax = 4
 cgen = Rot3DCoeffs_long(Lmax)
 maxl = [0, 7, 5, 3, 2]
 for ntest = 1:30
+   local ν, ll, Ure, Mll, X, θ, Q, B1, B2
    ν = rand(2:5)
    ll = rand(0:maxl[ν], ν)
    ll = SVector(ll...)      
