@@ -200,8 +200,8 @@ end
 @info("Equivariance of coupled rSH based basis")  
 # TODO: add tests for L = 1, 2, 3, 4
 for L = 0:0
-   cgen = Rot3DCoeffs_real(L)
-   maxl = [0, 7, 5, 3, 2]
+   local cgen = Rot3DCoeffs_real(L)
+   local maxl = [0, 7, 5, 3, 2]
    for ν = 2:5
       @info("Testing equivariance of coupled rSH based basis: L = $L, ν = $ν")
       for ntest = 1:(200 ÷ ν)
@@ -257,7 +257,7 @@ for L = 0:2
    end
 end
 
-@info("Equivariance of each 'subblock' of the cSH based LONG basis")  
+@info("Testing equivariance of each 'subblock' of the cSH based LONG basis")  
 Lmax = 4
 cgen = Rot3DCoeffs_long(Lmax)
 maxl = [0, 7, 5, 3, 2]
