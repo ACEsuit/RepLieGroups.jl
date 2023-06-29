@@ -1,9 +1,10 @@
 module O3
 
+using RepLieGroups: SYYVector
 using StaticArrays, SparseArrays
 using LinearAlgebra: norm, rank, svd, Diagonal, tr, dot
 
-export ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_real
+export ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_real, Rot3DCoeffs_long
 
 # -------------------
 
@@ -71,6 +72,7 @@ function _select_t(L, l, M, K)
 		end
 	end
 	# We assumed that there is only one coefficient; this will warn us if it fails
+	# For Rot3DCoeffs_real, it can have more than one value
 	@assert numt == 1
 	return tret
 end
@@ -85,6 +87,10 @@ coco_init(::Val{L}, T) where L = L == 0 ? [ complex(T(1));; ] : []
 
 coco_init(::Val{L}, T, l, m, μ) where L = L == 0 ? (
                   l == m == μ == 0 ? complex(T(1)) : complex(T(0))  ) : ( vec_cou_coe(Rot3DCoeffs(0), l, m, μ, L, _select_t(L, l, m, μ)) )
+
+# TODO: This is still wrong - to be modified
+coco_init_real(::Val{L}, T, l, m, μ) where L = L == 0 ? (
+				  l == m == μ == 0 ? complex(T(1)) : complex(T(0))  ) : ( [ vec_cou_coe(Rot3DCoeffs_real(0), l, m, μ, L, _select_t(L, l, m, μ)[i]) for i = 1: length(_select_t(L, l, m, μ)) ] )
 
 coco_zeros(::Val{L}, T, ll, mm, kk) where L = L == 0 ? complex(T(0)) : @SVector zeros(T,2L+1)
 
@@ -103,7 +109,7 @@ function mm_filter(mm,L=0)
 	set(m) = unique([m,-m])
 	mmset = Iterators.product([set(mm[i]) for i = 1:length(mm)]...) |> collect
 	for (i,m) in enumerate(mmset)
-		if sum(m) == 0 # Was is simply "... <= L" for larger L??
+		if abs(sum(m)) <= L # Was it simply "... <= L" for larger L??
 			return true
 		end
 	end
@@ -323,10 +329,15 @@ end
 # TODO: actually this seems false; it is only one recursion step, and a bit
 #       or reshuffling should allow us to get rid of the {N = 2} case.
 
-(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}})(ll::StaticVector{1},
+(A::Rot3DCoeffs{L, T})(ll::StaticVector{1},
                  mm::StaticVector{1},
                  kk::StaticVector{1}) where {L, T} =
 		coco_init(_ValL(A), T, ll[1], mm[1], kk[1])
+		
+(A::Rot3DCoeffs_real{L, T})(ll::StaticVector{1},
+		         mm::StaticVector{1},
+		         kk::StaticVector{1}) where {L, T} =
+		coco_init_real(_ValL(A), T, ll[1], mm[1], kk[1])
 
 
 function _compute_val(A::Rot3DCoeffs{L, T}, ll::StaticVector{N},
@@ -493,7 +504,7 @@ function __compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, ll, Ml
 		@assert length(cc) == 1
 		cc[1][im] = cc0
 	end
-	# NOTE: We won't have this in the current setting???
+	# # NOTE: We won't have this in the current setting???
 	# function __into_cc!(cc, cc0::AbstractVector, im)
 	# 	@assert length(cc) == length(cc0)
 	# 	for p = 1:length(cc)
@@ -528,5 +539,199 @@ function __compute_Al(A::Union{Rot3DCoeffs{L, T},Rot3DCoeffs_real{L, T}}, ll, Ml
 	return CC, Mll
 end
 
+
+## I will first define Rot3DCoeffs_long at the very end and we then decide how we unify things...
+
+struct Rot3DCoeffs_long{L, T}
+   vals::Vector{Dict}      # val[N] = coeffs for correlation order N
+   cg::ClebschGordan{T}
+end
+
+_ValL(::Rot3DCoeffs_long{L}) where {L} = Val{L}() 
+
+coco_type_long(::Val{L}, T::Type{<: Number}) where L = SYYVector{L, (L+1)^2,T} 
+
+function coco_init_long(::Val{L}, T, l, m, μ) where L
+	# TODO: ComplexF64? Float64?
+	init = zeros(T,(L+1)^2)
+	for ltemp = 0:L
+		init[ltemp^2+1:(ltemp+1)^2] = ltemp == 0 ? [coco_init(Val(ltemp),T,l,m,μ)] : 
+		try coco_init(Val(ltemp),T,l,m,μ) 
+		catch 
+			zeros(T,2ltemp+1)
+		end
+		# NOTE: A very interesting point - we currently do not have an elegant filter for all (sub)L
+		#       so we sometimes have asseration error in vec_cou_coeff function. However, this only means that 
+		#       the coupling coefficients for those cases should be 0!
+	end
+	init = NTuple{(L+1)^2,T}(init)
+	return SYYVector(init)
+end
+
+coco_zeros_long(::Val{L}, T, ll, mm, kk) where L = SYYVector(NTuple{(L+1)^2,T}(zeros((L+1)^2)))
+
+coco_filter_long(::Val{L}, ll, mm) where L = 
+		L == 0 ? iseven(sum(ll)) && abs(sum(mm)) <= L : abs(sum(mm)) <= L
+
+coco_filter_long(::Val{L}, ll, mm, kk) where L = 
+		L == 0 ? iseven(sum(ll)) && abs(sum(mm)) <= L && abs(sum(kk)) <= L : abs(sum(mm)) <= L && abs(sum(kk)) <= L
+		
+coco_dot(u1::SYYVector{L,N,T}, u2::SYYVector{L,N,T}) where {L,N,T} = dot(u1.data, u2.data)
+
+Rot3DCoeffs_long(L, T=Float64) = Rot3DCoeffs_long{L, T}(Dict[], ClebschGordan(T))
+
+function get_vals(A::Rot3DCoeffs_long{L, T}, valN::Val{N}) where {L,T,N}
+	# make up an ll, kk, mm and compute a dummy coupling coeff
+	ll, mm, kk = SVector(0), SVector(0), SVector(0)
+	cc0 = coco_zeros_long(_ValL(A), T, ll, mm, kk)
+	TP = typeof(cc0)
+	if length(A.vals) < N
+		# create more dictionaries of the correct type
+		for n = length(A.vals)+1:N
+			push!(A.vals, dicttype(n, TP)())
+		end
+	end
+   return (A.vals[N])::(dicttype(valN, TP))
+end
+
+function (A::Rot3DCoeffs_long{L, T})(ll::StaticVector{N},
+                             mm::StaticVector{N},
+                             kk::StaticVector{N}) where {L, T, N}
+   vals = get_vals(A, Val(N))  # this should infer the type!
+   key = _key(ll, mm, kk)
+   if haskey(vals, key)
+      val  = vals[key]
+   else
+      val = _compute_val(A, key...)
+      vals[key] = val
+   end
+   return val
+end
+
+# the recursion has two steps so we need to define the
+# coupling coefficients for N = 1, 2
+# TODO: actually this seems false; it is only one recursion step, and a bit
+#       or reshuffling should allow us to get rid of the {N = 2} case.
+
+(A::Rot3DCoeffs_long{L, T})(ll::StaticVector{1},
+		         mm::StaticVector{1},
+		         kk::StaticVector{1}) where {L, T} =
+		coco_init_long(_ValL(A), T, ll[1], mm[1], kk[1])
+
+
+function _compute_val(A::Rot3DCoeffs_long{L, T}, ll::StaticVector{N},
+                                         mm::StaticVector{N},
+                                         kk::StaticVector{N}) where {L, T, N}
+	val = coco_zeros_long(_ValL(A), T, ll, mm, kk)
+	TV = typeof(val)
+
+	tmp = zero(MVector{N-1, Int})
+
+	function _get_pp(aa, ap)
+		for i = 1:N-2
+			@inbounds tmp[i] = aa[i]
+		end
+		tmp[N-1] = ap
+		return SVector(tmp)
+	end
+
+	jmin = maximum( ( abs(ll[N-1]-ll[N]),
+				         abs(kk[N-1]+kk[N]),
+						   abs(mm[N-1]+mm[N]) ) )
+   jmax = ll[N-1]+ll[N]
+   for j = jmin:jmax
+		cgk = A.cg(ll[N-1], kk[N-1], ll[N], kk[N], j, kk[N-1]+kk[N])
+		cgm = A.cg(ll[N-1], mm[N-1], ll[N], mm[N], j, mm[N-1]+mm[N])
+		if cgk * cgm  != 0
+			llpp = _get_pp(ll, j) # SVector(llp..., j)
+			mmpp = _get_pp(mm, mm[N-1]+mm[N]) # SVector(mmp..., mm[N-1]+mm[N])
+			kkpp = _get_pp(kk, kk[N-1]+kk[N]) # SVector(kkp..., kk[N-1]+kk[N])
+			a = A(llpp, mmpp, kkpp)# ::TV
+			val += cgk * cgm * a
+		end
+   end
+   return val
+end
+
+function re_basis(A::Rot3DCoeffs_long{L, T}, ll::SVector) where {L, T}
+	TCC = coco_type_long(_ValL(A), T)
+	CC, Mll = compute_Al(A, ll)  # CC::Vector{Vector{...}}
+	G = [ sum( coco_dot(CC[a][i], CC[b][i]) for i = 1:length(Mll) )
+			for a = 1:length(CC), b = 1:length(CC) ]
+	svdC = svd(G)
+	rk = rank(Diagonal(svdC.S), rtol = 1e-7)
+	# Diagonal(sqrt.(svdC.S[1:rk])) * svdC.U[:, 1:rk]' * CC
+	# construct the new basis
+	Ured = Diagonal(sqrt.(svdC.S[1:rk])) * svdC.U[:, 1:rk]'
+	Ure = Matrix{TCC}(undef, rk, length(Mll))
+	for i = 1:rk
+		Ure[i, :] = sum(Ured[i, j] * CC[j]  for j = 1:length(CC))
+	end
+	return Ure, Mll
+end
+
+
+# function barrier
+function compute_Al(A::Rot3DCoeffs_long{L, T}, ll::SVector) where {L, T}
+	fil(mm) = abs(sum(mm)) <= L
+	Mll = collect(_mrange(_ValL(A), ll; mm_filter = fil))
+   TP = coco_type_long(_ValL(A), T)
+	if length(Mll) == 0
+		return Vector{TP}[], Mll
+	end
+
+	TA = typeof(A(ll, Mll[1], Mll[1]))
+	return __compute_Al(A, ll, Mll, TP, TA)
+end
+
+# TODO: what was TA for? Can we get rid of it via coco_type? 
+
+function __compute_Al(A::Rot3DCoeffs_long{L, T}, ll, Mll, TP, TA) where {L, T}	
+	lenMll = length(Mll)
+	# each element of CC will be one row of the coupling coefficients
+	TCC = coco_type_long(_ValL(A), T)
+	CC = Vector{TCC}[]
+	# some utility funcions to allow coco_init to return either a property
+	# or a vector of properties
+	function __into_cc!(cc, cc0, im)   # cc0: ::AbstractProperty
+		@assert length(cc) == 1
+		cc[1][im] = cc0
+	end
+	# # NOTE: We won't have this in the current setting???
+	# function __into_cc!(cc, cc0::AbstractVector, im)
+	# 	@assert length(cc) == length(cc0)
+	# 	for p = 1:length(cc)
+	# 		cc[p][im] = cc0[p]
+	# 	end
+	# end
+
+	for (ik, kk) in enumerate(Mll)  # loop over possible basis functions
+		# do a dummy calculation to determine how many coefficients we will get
+		cc0 = A(ll, Mll[1], kk)# ::TA
+      @assert length(cc0) == (L+1)^2 
+      numcc = 1
+      # the assert above replaced the following line; to be replaced with 
+      #     the suitable generalisation to L > 0 
+		# numcc = (cc0 isa AbstractProperty ? 1 : length(cc0))
+		# allocate the right number of vectors to store basis function coeffs
+		cc = [ Vector{TCC}(undef, lenMll) for _=1:numcc ]
+		for (im, mm) in enumerate(Mll) # loop over possible indices
+			if !coco_filter_long(_ValL(A), ll, mm, kk)
+				cc00 = zeros(TP, length(cc))::TA
+				__into_cc!(cc, cc00, im)
+			else
+				# get all possible coupling coefficients
+				cc0 = A(ll, mm, kk)# ::TA
+				__into_cc!(cc, cc0, im)
+			end
+		end
+		# and now push them onto the big stack.
+		append!(CC, cc)
+	end
+
+	return CC, Mll
+end
+
+## End of the latest long Rot3D implementation
 
 end
