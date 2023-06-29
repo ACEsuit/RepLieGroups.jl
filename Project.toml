@@ -1,7 +1,7 @@
 name = "RepLieGroups"
 uuid = "f07d36f2-91c4-427a-b67b-965fe5ebe1d2"
 authors = ["Christoph Ortner <christophortner@gmail.com> and contributors"]
-version = "0.0.2"
+version = "0.0.3"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
