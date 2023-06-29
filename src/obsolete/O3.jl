@@ -555,6 +555,7 @@ function coco_init_long(::Val{L}, T, l, m, μ) where L
 	# TODO: ComplexF64? Float64?
 	init = zeros(T,(L+1)^2)
 	for ltemp = 0:L
+		if !iseven(l+L); continue; end
 		init[ltemp^2+1:(ltemp+1)^2] = ltemp == 0 ? [coco_init(Val(ltemp),T,l,m,μ)] : 
 		try coco_init(Val(ltemp),T,l,m,μ) 
 		catch 
