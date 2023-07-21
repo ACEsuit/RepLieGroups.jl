@@ -182,14 +182,15 @@ for L = 0:2
 
          X = [ (@SVector rand(3)) for i in 1:length(ll) ]
          θ = rand() * 2pi
-         Q = RotXYZ(0, 0, θ)
+         sign = rand([1,-1])
+         Q = sign * RotXYZ(0, 0, θ)
          B1 = eval_basis(ll, Ure, Mll, X; Real = false)
          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
          # TODO: combine into a single test 
          if L == 0
             print_tf(@test norm(B1 - B2)<1e-12)
          else
-            D = wignerD(L, 0, 0, θ)
+            D = sign^L * wignerD(L, 0, 0, θ)
             print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
          end
       end
@@ -214,13 +215,14 @@ for L = 0:0
 
          X = [ (@SVector rand(3)) for i in 1:length(ll) ]
          θ = rand() * 2pi
-         Q = RotXYZ(0, 0, θ)
+         sign = rand([1,-1])
+         Q = sign * RotXYZ(0, 0, θ)
          B1 = eval_basis(ll, Ure, Mll, X; Real = true)
          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = true)
          if L == 0
             print_tf(@test norm(B1 - B2)<1e-12)
          else
-            D = Ctran(L) * wignerD(L, 0, 0, θ) * Ctran(L)'
+            D = sign^L * Ctran(L) * wignerD(L, 0, 0, θ) * Ctran(L)'
             print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
          end
       end
@@ -246,16 +248,38 @@ for L = 0:2
 
          X = [ (@SVector rand(3)) for i in 1:length(ll) ]
          θ = rand() * 2pi
-         Q = RotXYZ(0, 0, θ)
+         sign = rand([1,-1])
+         Q = sign * RotXYZ(0, 0, θ)
 
          B1 = eval_basis(ll, Ure, Mll, X; Real = false)
          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
-         D = BlockDiagonal([ wignerD(l, 0, 0, θ) for l = 0:L] )
+         D = BlockDiagonal([ sign^l * wignerD(l, 0, 0, θ) for l = 0:L] )
          print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
       end
-      println()
+      
    end
 end
+
+@info("Consistency of the long basis and the seperated basis") 
+for L = 0:1
+   @info("Testing consistency of the long basis and the seperated basis: L = $L")
+   cgen1 = Rot3DCoeffs_long(L)
+   cgen2 = Rot3DCoeffs(L)
+   maxl = [0, 7, 5, 3, 2]
+   for ntest = 1:30
+      ν = rand(2:5)
+      ll = rand(0:maxl[ν], ν)
+      if !iseven(sum(ll)+L); continue; end 
+      ll = SVector(ll...)      
+      Ure1, Mll1 = re_basis(cgen1, ll)
+      Ure2, Mll2 = re_basis(cgen2, ll)
+      tf1 = Mll1 == Mll2
+      tf2 = L == 0 ? [ Ure1[i][1] for i = 1:length(Ure1) ] == [ Ure2[i] for i = 1:length(Ure2) ] :
+                     [ Ure1[i][Val(1)] for i = 1:length(Ure1) ]  ==[ Ure2[i] for i = 1:length(Ure2) ]
+      print_tf(@test tf1 && tf2)
+   end
+   println()
+end   
 
 @info("Testing equivariance of each 'subblock' of the cSH based LONG basis")  
 Lmax = 4
