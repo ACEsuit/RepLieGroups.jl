@@ -234,19 +234,36 @@ function clebschgordan(j1, m1, j2, m2, J, M, T=Float64)
    return T(sqrt(N) * G)
 end
 
-function Ctran(l::Int64,m::Int64,μ::Int64)
+
+# function Ctran(l::Int64,m::Int64,μ::Int64)   # Ctran for P4ML.rSH
+#    if abs(m) ≠ abs(μ)
+#       return 0
+#    elseif abs(m) == 0
+#       return 1
+#    elseif m < 0 && μ < 0
+#       return - im * (-1)^m/sqrt(2) # 1/sqrt(2)
+#    elseif m < 0 && μ > 0
+#       return im/sqrt(2) # (-1)^m/sqrt(2)
+#    elseif m > 0 && μ < 0
+#       return (-1)^m/sqrt(2) # - im * (-1)^m/sqrt(2)
+#    else
+#       return 1/sqrt(2) # im/sqrt(2)
+#    end
+# end
+
+function Ctran(l::Int64,m::Int64,μ::Int64)   # Ctran for SpheriCart.SphericalHarmonics
    if abs(m) ≠ abs(μ)
       return 0
    elseif abs(m) == 0
       return 1
    elseif m < 0 && μ < 0
-      return - im * (-1)^m/sqrt(2) # 1/sqrt(2)
+      return im/sqrt(2)
    elseif m < 0 && μ > 0
-      return im/sqrt(2) # (-1)^m/sqrt(2)
+      return - im * (-1)^m/sqrt(2)
    elseif m > 0 && μ < 0
-      return (-1)^m/sqrt(2) # - im * (-1)^m/sqrt(2)
+      return 1/sqrt(2)
    else
-      return 1/sqrt(2) # im/sqrt(2)
+      return (-1)^m/sqrt(2)
    end
 end
 

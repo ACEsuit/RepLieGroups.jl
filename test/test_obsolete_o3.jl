@@ -3,7 +3,7 @@
 using Test, RepLieGroups, StaticArrays, Polynomials4ML
 using RepLieGroups.O3: ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_real, Rot3DCoeffs_long, 
             re_basis, _mrange, MRange, Ctran, clebschgordan
-using Polynomials4ML: CYlmBasis, index_y, RYlmBasis 
+using Polynomials4ML: CYlmBasis, index_y, RYlmBasis, SCYlmBasis
 using Polynomials4ML.Testing: print_tf
 using LinearAlgebra
 using WignerD, Rotations, BlockDiagonals
@@ -19,7 +19,7 @@ function eval_basis(ll, Ure, Mll, X; Real = true)
    val = _convert(zeros(typeof(Ure[1]), size(Ure,1)))
    
    if Real
-      basis = RYlmBasis(sum(ll))
+      basis = SCYlmBasis(sum(ll))
    else
       basis = CYlmBasis(sum(ll))
    end
@@ -44,7 +44,7 @@ end
 @info("Testing the correctness of Ctran(L)")
 Lmax = 4
 basis1 = CYlmBasis(Lmax)
-basis2 = RYlmBasis(Lmax)
+basis2 = SCYlmBasis(Lmax)
 for L = 0:Lmax
    @info("Testing whether or not we found a correct transformation between cSH to rSH for L = $L")
    for ntest = 1:30
