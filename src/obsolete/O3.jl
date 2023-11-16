@@ -198,13 +198,13 @@ the same length such that `sum(mm) == 0` (or such that mm is feasible, for large
 """
 _mrange(L::Integer, ll) = _mrange(Val{L}(), ll)
 
-function _mrange(::Val{L}, ll; ll_filter = ll -> iseven(sum(ll)+L), mm_filter = mm -> abs(sum(mm)) <= L) where {L}
+function _mrange(::Val{L}, ll; ll_filter = ll -> iseven(sum(ll)+L), mm_filter = (mm,LL) -> abs(sum(mm)) <= LL) where {L}
    if !ll_filter(ll)
 	   return MRange{L, length(ll), Tuple}(ll, ())
    end
    N = length(ll) 
    cartrg = CartesianIndices(ntuple(i -> -ll[i]:ll[i], length(ll)))
-   cartrg = cartrg[findall(x -> x==1, mm_filter.(cartrg))]
+   cartrg = cartrg[findall(x -> x==1, mm_filter.(cartrg,L))]
 	return MRange{L, N, typeof(cartrg)}(ll, cartrg)
 end
 

@@ -152,8 +152,8 @@ for ntest = 1:100
                      # val2 += c1 * c2 * DDset[λ+1][m+mm+λ+1,μ+μμ+λ+1]
                      for p in unique([m+mm,-m-mm])
                        for q in unique([μ+μμ,-μ-μμ])
-                          c3 = Ctran(l1+l2,p,m+mm)' * Ctran(l1+l2,q,μ+μμ)
-                              val2 += c1 * c2 * c3 * Dset[λ+1][p+λ+1,q+λ+1]
+                           c3 = Ctran(l1+l2,p,m+mm)' * Ctran(l1+l2,q,μ+μμ)
+                           val2 += c1 * c2 * c3 * Dset[λ+1][p+λ+1,q+λ+1]
                        end
                      end
                   end
