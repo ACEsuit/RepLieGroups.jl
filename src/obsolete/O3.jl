@@ -48,14 +48,39 @@ Base.adjoint(idx::D_Index) = D_Index( (-1)^(idx.μ+idx.m), - idx.μ, - idx.m)
 
 function vec_cou_coe(rotc::Union{Rot3DCoeffs, Rot3DCoeffs_real},
 					      l::Integer, m::Integer, μ::Integer,
-					      L::Integer, t::Integer)
-	@assert 0 < t <= 2L+1
+					      L::Integer, t::Union{Integer,Nothing})
+	if isnothing(t)
+		return SVector{2L+1}(zeros(ComplexF64,2L+1))
+	else
+		@assert 0 < t <= 2L+1
+	end
 	D = wigner_D_indices(L)'   # Dt = D[:,t]  -->  # D^* ⋅ e^t
 	LL = SA[l, L]
 	Z = ntuple(i -> begin
 			cc = (rotc(LL, SA[μ, D[i, t].m], SA[m, D[i, t].μ]))
 			D[i, t].sign * cc
 				end, 2*L+1)
+	# Z = [ D[i, t].sign * rotc(LL, SA[μ, D[i, t].m], SA[m, D[i, t].μ]) for i = 1:2L+1 ]
+	# Z = [ D[i, t].sign * rotc(LL, SA[m, D[i, t].μ], SA[m, D[i, t].μ]) for i = 1:2L+1 ]
+	return SVector(Z)
+end
+
+function vec_cou_coe(rotc::Union{Rot3DCoeffs, Rot3DCoeffs_real},
+	l::Integer, m::Integer, μ::Integer,
+	L::Integer, t::Vector{Integer})
+	@assert all(0 < t[i] <= 2L+1 for i = 1:length(t))
+	D = wigner_D_indices(L)'   # Dt = D[:,t]  -->  # D^* ⋅ e^t
+	LL = SA[l, L]
+	Z = ntuple(i -> begin
+			cc = (rotc(LL, SA[μ, D[i, t[1]].m], SA[m, D[i, t[1]].μ]))
+			D[i, t[1]].sign * cc
+		end, 2*L+1)
+	for j = 2:length(t)
+		Z += ntuple(i -> begin
+				cc = (rotc(LL, SA[μ, D[i, t[j]].m], SA[m, D[i, t[j]].μ]))
+				D[i, t[j]].sign * cc
+			end, 2*L+1)
+	end
 	# Z = [ D[i, t].sign * rotc(LL, SA[μ, D[i, t].m], SA[m, D[i, t].μ]) for i = 1:2L+1 ]
 	# Z = [ D[i, t].sign * rotc(LL, SA[m, D[i, t].μ], SA[m, D[i, t].μ]) for i = 1:2L+1 ]
 	return SVector(Z)
@@ -77,6 +102,28 @@ function _select_t(L, l, M, K)
 	return tret
 end
 
+function _select_t_real(L, l, M, K)
+	D = wigner_D_indices(L)'
+	tret = -1; numt = 0
+	for t = 1:2L+1
+		prodμt = prod( (D[i, t].μ + M) for i in 1:2L+1) * prod( (D[i, t].μ - M) for i in 1:2L+1) # avoid more allocations
+		prodmt = prod( (D[i, t].m + K) for i in 1:2L+1) * prod( (D[i, t].m - K) for i in 1:2L+1)
+		if prodμt == prodmt == 0
+			tret = t; numt += 1
+		end
+	end
+	# We assumed that there is only one coefficient; this will warn us if it fails
+	# For Rot3DCoeffs_real, it can have more than one value
+	# @assert numt <= 1
+	if numt == 0
+		return nothing
+	else
+		return tret
+	end
+	# end
+	# return tret
+end
+
 # ------------------- recursion details for different Ls 
 
 # Val{0} stands for L = 0 so invariants, let's focus on that first. 
@@ -90,11 +137,12 @@ coco_init(::Val{L}, T, l, m, μ) where L = L == 0 ? (
 
 # TODO: This is still wrong - to be modified
 coco_init_real(::Val{L}, T, l, m, μ) where L = L == 0 ? (
-				  l == m == μ == 0 ? complex(T(1)) : complex(T(0))  ) : ( [ vec_cou_coe(Rot3DCoeffs_real(0), l, m, μ, L, _select_t(L, l, m, μ)[i]) for i = 1: length(_select_t(L, l, m, μ)) ] )
+# 				  l == m == μ == 0 ? complex(T(1)) : complex(T(0))  ) : ( [ vec_cou_coe(Rot3DCoeffs_real(0), l, m, μ, L, _select_t_real(L, l, m, μ)[i]) for i = 1: length(_select_t_real(L, l, m, μ)) ] )
+				  l == m == μ == 0 ? complex(T(1)) : complex(T(0))  ) : ( vec_cou_coe(Rot3DCoeffs_real(0), l, m, μ, L, _select_t_real(L, l, m, μ)) )
 
 coco_zeros(::Val{L}, T, ll, mm, kk) where L = L == 0 ? complex(T(0)) : @SVector zeros(T,2L+1)
 
-## NOTE: for rSH, we can enforce sum(mm) == 0 but for cSH this is not the case. 
+## NOTE: for cSH, we can enforce sum(mm) == 0 but for rSH this is not the case. 
 #        We need a new filter, which is "there exist {t_i}_i", such that ∑_i (-1)^(t_i)*mm_i = 0
 
 coco_filter(::Val{L}, ll, mm) where L = iseven(sum(ll)+L) && abs(sum(mm)) <= L
@@ -103,9 +151,9 @@ coco_filter(::Val{L}, ll, mm, kk) where L = iseven(sum(ll)+L) && abs(sum(mm)) <=
 
 function mm_filter(mm,L=0)
 	# TODO: Extend this to larger L...
-	if L ≠ 0
-		error("Not implemented yet!")
-	end
+	# if L ≠ 0
+	# 	error("Not implemented yet!")
+	# end
 	set(m) = unique([m,-m])
 	mmset = Iterators.product([set(mm[i]) for i = 1:length(mm)]...) |> collect
 	for (i,m) in enumerate(mmset)

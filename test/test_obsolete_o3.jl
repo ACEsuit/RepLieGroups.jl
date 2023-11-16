@@ -101,7 +101,7 @@ println()
    
 @info("Testing the D-matrix for rSH")
 Lmax = 4
-basis = RYlmBasis(Lmax)
+basis = SCYlmBasis(Lmax)
 for ntest = 1:30
    local θ, Q
    x = @SVector rand(3)
@@ -199,7 +199,7 @@ end
 
 @info("Equivariance of coupled rSH based basis")  
 # TODO: add tests for L = 1, 2, 3, 4
-for L = 0:0
+for L = 0:1
    local cgen = Rot3DCoeffs_real(L)
    local maxl = [0, 7, 5, 3, 2]
    for ν = 2:5
