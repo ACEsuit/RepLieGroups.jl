@@ -184,7 +184,7 @@ for L = 0:2
 
          X = [ (@SVector rand(3)) for i in 1:length(ll) ]
          θ = rand(3) * 2pi
-         Q = RotXYZ(θ...)
+         Q = RotZYZ(θ...)
          B1 = eval_basis(ll, Ure, Mll, X; Real = false)
          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
          # TODO: combine into a single test 
@@ -216,7 +216,7 @@ for L = 0:0
 
          X = [ (@SVector rand(3)) for i in 1:length(ll) ]
          θ = rand(3) * 2pi
-         Q = RotXYZ(θ...)
+         Q = RotZYZ(θ...)
          B1 = eval_basis(ll, Ure, Mll, X; Real = true)
          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = true)
          if L == 0
@@ -248,7 +248,7 @@ for L = 0:2
 
          X = [ (@SVector rand(3)) for i in 1:length(ll) ]
          θ = rand(3) * 2pi
-         Q = RotXYZ(θ...)
+         Q = RotZYZ(θ...)
 
          B1 = eval_basis(ll, Ure, Mll, X; Real = false)
          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
@@ -273,7 +273,7 @@ for ntest = 1:30
    
    X = [ (@SVector rand(3)) for i in 1:length(ll) ]
    θ = rand(3) * 2pi
-   Q = RotXYZ(θ...)
+   Q = RotZYZ(θ...)
    
    B1 = eval_basis(ll, Ure, Mll, X; Real = false)
    B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
