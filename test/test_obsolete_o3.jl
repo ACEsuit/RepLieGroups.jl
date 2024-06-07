@@ -62,14 +62,16 @@ basis = CYlmBasis(Lmax)
 for ntest = 1:30
    local θ, Q
    x = @SVector rand(3)
-   θ = rand() * 2pi
-   Q = RotXYZ(0, 0, θ)
+   θ = rand(3) * 2pi
+   Q = RotZYZ(θ...)
    Ylm = evaluate(basis, x)
    Ylm_r = evaluate(basis, Q * x)
    for L = 0:Lmax
       YL = Ylm[L^2+1:(L+1)^2]
       YrL = Ylm_r[L^2+1:(L+1)^2]
-      D = wignerD(L, 0, 0, θ)
+      D = transpose(wignerD(L, θ...)) 
+      # Here transpose is needed because of the different convention (between ours and WignerD.jl's) of the D-matrix; 
+      # Same for the cases below.
       print_tf(@test norm(D * YrL- collect(YL)) < 1e-12)
    end
 end
@@ -77,8 +79,8 @@ println()
 
 @info("The cSH D-matrix recursion")
 Lmax = 4
-θ = rand() * 2pi
-Dset = [ wignerD(L, 0, 0, θ) for L = 0:Lmax ]
+θ = rand(3) * 2pi
+Dset = [ transpose(wignerD(L, θ...)) for L = 0:Lmax ]
 
 for ntest = 1:100
    l1 = rand(0:Lmax)
@@ -105,14 +107,14 @@ basis = RYlmBasis(Lmax)
 for ntest = 1:30
    local θ, Q
    x = @SVector rand(3)
-   θ = rand() * 2pi
-   Q = RotXYZ(0, 0, θ)
+   θ = rand(3) * 2pi
+   Q = RotZYZ(θ...)
    Ylm = evaluate(basis, x)
    Ylm_r = evaluate(basis, Q * x)
    for L = 0:Lmax
       YL = Ylm[L^2+1:(L+1)^2]
       YrL = Ylm_r[L^2+1:(L+1)^2]
-      D = wignerD(L, 0, 0, θ)
+      D = transpose(wignerD(L, θ...))
       print_tf(@test norm(Ctran(L) * D * Ctran(L)' * YrL- collect(YL)) < 1e-12)
    end
 end
@@ -126,9 +128,9 @@ include("side_tests.jl")
 
 @info("The rSH D-matrix recursion")
 Lmax = 4
-θ = rand() * 2pi
-Dset = [ Ctran(L) * wignerD(L, 0, 0, θ) * Ctran(L)' for L = 0:Lmax ]
-DDset = [ wignerD(L, 0, 0, θ) for L = 0:Lmax ]
+θ = rand(3) * 2pi
+Dset = [ Ctran(L) * transpose(wignerD(L, θ...)) * Ctran(L)' for L = 0:Lmax ]
+DDset = [ transpose(wignerD(L, θ...)) for L = 0:Lmax ]
 
 for ntest = 1:100
    l1 = rand(0:Lmax)
@@ -181,15 +183,15 @@ for L = 0:2
          if size(Ure, 1) == 0; continue; end
 
          X = [ (@SVector rand(3)) for i in 1:length(ll) ]
-         θ = rand() * 2pi
-         Q = RotXYZ(0, 0, θ)
+         θ = rand(3) * 2pi
+         Q = RotXYZ(θ...)
          B1 = eval_basis(ll, Ure, Mll, X; Real = false)
          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
          # TODO: combine into a single test 
          if L == 0
             print_tf(@test norm(B1 - B2)<1e-12)
          else
-            D = wignerD(L, 0, 0, θ)
+            D = transpose(wignerD(L, θ...))
             print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
          end
       end
@@ -213,14 +215,14 @@ for L = 0:0
          if size(Ure, 1) == 0; continue; end
 
          X = [ (@SVector rand(3)) for i in 1:length(ll) ]
-         θ = rand() * 2pi
-         Q = RotXYZ(0, 0, θ)
+         θ = rand(3) * 2pi
+         Q = RotXYZ(θ...)
          B1 = eval_basis(ll, Ure, Mll, X; Real = true)
          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = true)
          if L == 0
             print_tf(@test norm(B1 - B2)<1e-12)
          else
-            D = Ctran(L) * wignerD(L, 0, 0, θ) * Ctran(L)'
+            D = Ctran(L) * transpose(wignerD(L, θ...)) * Ctran(L)'
             print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
          end
       end
@@ -245,12 +247,12 @@ for L = 0:2
          if size(Ure, 1) == 0; continue; end
 
          X = [ (@SVector rand(3)) for i in 1:length(ll) ]
-         θ = rand() * 2pi
-         Q = RotXYZ(0, 0, θ)
+         θ = rand(3) * 2pi
+         Q = RotXYZ(θ...)
 
          B1 = eval_basis(ll, Ure, Mll, X; Real = false)
          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
-         D = BlockDiagonal([ wignerD(l, 0, 0, θ) for l = 0:L] )
+         D = BlockDiagonal([ transpose(wignerD(l, θ...)) for l = 0:L] )
          print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
       end
       println()
@@ -270,8 +272,8 @@ for ntest = 1:30
    if size(Ure, 1) == 0; continue; end
    
    X = [ (@SVector rand(3)) for i in 1:length(ll) ]
-   θ = rand() * 2pi
-   Q = RotXYZ(0, 0, θ)
+   θ = rand(3) * 2pi
+   Q = RotXYZ(θ...)
    
    B1 = eval_basis(ll, Ure, Mll, X; Real = false)
    B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
@@ -279,7 +281,7 @@ for ntest = 1:30
    for l = 0:Lmax
       B1l = [ B1[i][Val(l)] for i = 1:length(B1) ]
       B2l = [ B2[i][Val(l)] for i = 1:length(B2) ]
-      D = wignerD(l, 0, 0, θ)
+      D = transpose(wignerD(l, θ...))
       print_tf(@test norm(B1l - Ref(D) .* B2l)<1e-12)
    end
 end
