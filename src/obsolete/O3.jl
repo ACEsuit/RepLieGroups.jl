@@ -250,6 +250,23 @@ function Ctran(l::Int64,m::Int64,μ::Int64)
    end
 end
 
+
+# function Ctran(l::Int64,m::Int64,μ::Int64)
+# 	if abs(m) ≠ abs(μ)
+# 	   return 0
+# 	elseif abs(m) == 0
+# 	   return 1
+# 	elseif m < 0 && μ < 0
+# 	   return - im * (-1)^m # 1/sqrt(2)
+# 	elseif m < 0 && μ > 0
+# 	   return im # (-1)^m/sqrt(2)
+# 	elseif m > 0 && μ < 0
+# 	   return (-1)^m # - im * (-1)^m/sqrt(2)
+# 	else
+# 	   return 1. # im/sqrt(2)
+# 	end
+#  end
+
 Ctran(l::Int64) = sparse(Matrix{ComplexF64}([ Ctran(l,m,μ) for m = -l:l, μ = -l:l ])) |> dropzeros
 
 ## NOTE: Ctran(L) is the transformation matrix from rSH to cSH. More specifically, 
