@@ -45,7 +45,12 @@ function rand_rot()
    return exp(K - K') 
 end
 
+rand_config(nX::Integer) = [ rand_ball() for _ in 1:nX ]
+rand_config(nX::UnitRange) = rand_config(rand(nX))
 
+make_batch(ntest, nX) = [ rand_config(nX) for _ = 1:ntest ] 
+
+# --------------------------------------------------
 
 function eval_basis(Rs; coeffs, MM, ll, nn)
    @assert minimum(nn) >= 1 # radial basis indexing starts at 1 not 0. 
@@ -105,22 +110,22 @@ function eval_sym_basis(Rs; coeffs, MM, ll, nn)
 end
 
 
-function rand_batch(ntest; coeffs, MM, ll, nn) 
-   ORD = length(ll) # length of each group 
-   BB = zeros(size(coeffs, 1), ntest)
-   for i = 1:ntest 
-      # construct a random set of particles with 𝐫 ∈ ball(radius=1)
-      Rs = [ rand_ball() for _ in 1:ORD ]
+
+function rand_batch(; coeffs, MM, ll, nn, 
+                      ntest = 100, 
+                      batch = make_batch(ntest, length(ll)) ) 
+   BB = zeros(size(coeffs, 1), length(batch))
+   for (i, Rs) in enumerate(batch)
       BB[:, i] = eval_basis(Rs; coeffs=coeffs, MM=MM, ll=ll, nn=nn) 
    end
    return BB
 end
 
-function sym_rand_batch(ntest; coeffs, MM, ll, nn) 
-   ORD = length(ll) # length of each group (could be > ORD)
-   BB = zeros(size(coeffs, 1), ntest)
-   for i = 1:ntest 
-      Rs = [ rand_ball() for _ in 1:ORD ]
+function sym_rand_batch(; coeffs, MM, ll, nn, 
+                        ntest = 100, 
+                        batch = make_batch(ntest, length(ll)) ) 
+   BB = zeros(size(coeffs, 1), length(batch))
+   for (i, Rs) in enumerate(batch)
       BB[:, i] = eval_sym_basis(Rs; coeffs=coeffs, MM=MM, ll=ll, nn=nn)
    end
    return BB
@@ -182,7 +187,7 @@ for (itest, (nn, ll)) in enumerate(nnll_list)
    nbas_ri1 = size(coeffs1, 1)
    rank(coeffs1, rtol = 1e-12)
 
-   Rs = [rand_ball() for _ in 1:length(ll)]
+   Rs = rand_config(length(ll))
    Q = rand_rot() 
    QRs = [Q*Rs[i] for i in 1:length(Rs)]
    fRs1 = eval_basis(Rs; coeffs = coeffs1, MM = MM1, ll = ll, nn = nn)
@@ -191,10 +196,12 @@ for (itest, (nn, ll)) in enumerate(nnll_list)
 
    ntest = 1000
 
-   X = rand_batch(ntest; coeffs=coeffs1, MM=MM1, ll=ll, nn=nn)
+   RR = make_batch(ntest, length(ll))
+
+   X = rand_batch(; coeffs=coeffs1, MM=MM1, ll=ll, nn=nn, batch = RR)
    @test rank(X; rtol=1e-12) == size(X,1)
 
-   Xsym = sym_rand_batch(ntest; coeffs=coeffs1, MM=MM1, ll=ll, nn=nn)
+   Xsym = sym_rand_batch(; coeffs=coeffs1, MM=MM1, ll=ll, nn=nn, batch = RR)
    rk1 = rank(Xsym; rtol=1e-12)
    U, S, V = svd(Xsym)
    coeffs_ind1 = Diagonal(S[1:rk1]) \ (U[:, 1:rk1]' * coeffs1)
@@ -211,8 +218,13 @@ for (itest, (nn, ll)) in enumerate(nnll_list)
    U, S, V = svd(coeffs_rpi)
    coeffs_ind2 = Diagonal(S[1:rk2]) \ (U[:, 1:rk2]' * coeffs2)
 
-   Xsym_new = rand_batch(ntest; coeffs=coeffs_ind2, MM=MM2, ll=ll, nn=nn) #this is symmetric
+   Xsym_new = rand_batch(; coeffs=coeffs_ind2, MM=MM2, ll=ll, nn=nn, batch=RR) #this is symmetric
    @test rank(Xsym_new; rtol=1e-12) == rk2
+
+   # NOTE FROM CO: same batch is used so can compare!!!
+   # @show rank(Xsym) 
+   # @show rank(Xsym_new)
+   # @show rank([Xsym; Xsym_new], rtol = 1e-12)
 
 
    P1 = sortperm(MM1)
