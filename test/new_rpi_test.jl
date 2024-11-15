@@ -136,16 +136,49 @@ cc = Rot3DCoeffs(L)
 # of the tensor product basis   Y[l1, m1] * Y[l2, m2] * Y[l3, m3] * Y[l4, m4]
 # that are invariant under O(3) rotations.
 # ll = SA[1,2,2,2,3]
-ll_list = [SA[2,2,2,2], SA[2,2,2,2], SA[2,2,2,4], SA[2,2,3,3], SA[1,1,2,2,2], SA[1,1,2,2,2], SA[1,2,2,2,3], SA[2,2,2,2,2] ]
-nn_list = [SA[1,1,1,2], SA[1,1,2,3], SA[1,1,1,1], SA[1,1,1,1], SA[1,2,1,1,1], SA[2,2,1,1,2], SA[1,1,1,1,1], SA[1,1,1,1,1]  ]
-@assert length(ll_list) == length(nn_list)
-for k in 1:length(ll_list)
-   ll = ll_list[k]
+# ll_list = [SA[2,2,2,2], SA[2,2,2,2], SA[2,2,2,4], SA[2,2,3,3], SA[1,1,2,2,2], SA[1,1,2,2,2], SA[1,2,2,2,3], SA[2,2,2,2,2] ]
+# nn_list = [SA[1,1,1,2], SA[1,1,2,3], SA[1,1,1,1], SA[1,1,1,1], SA[1,2,1,1,1], SA[2,2,1,1,2], SA[1,1,1,1,1], SA[1,1,1,1,1]  ]
+
+using Combinatorics
+
+lmax = 4 
+nmax = 4
+nnll_list = [] 
+
+for ORD = 2:4
+   for ll in with_replacement_combinations(0:lmax, ORD) 
+      if !iseven(sum(ll)); continue; end 
+      if sum(ll) > 2 * lmax; continue; end 
+      for Inn in CartesianIndices( ntuple(_->1:nmax, ORD) )
+         nn = [ Inn.I[α] for α = 1:ORD ]
+         if sum(nn) > sum(1:nmax); continue; end
+         nnll = [ (ll[α], nn[α]) for α = 1:ORD ]
+         if !issorted(nnll); continue; end
+         push!(nnll_list, (SVector(nn...), SVector(ll...)))
+      end
+   end
+end
+
+long_nnll_list = nnll_list 
+short_nnll_list = nnll_list[1:20:end]
+@show length(long_nnll_list)
+@show length(short_nnll_list)
+
+##
+
+verbose = true 
+
+@info("Using short nnll list for testing")
+nnll_list = short_nnll_list
+
+# @info("Using long nnll list for testing")
+# nnll_list = long_nnll_list
+
+
+for (itest, (nn, ll)) in enumerate(nnll_list)
    N = length(ll)
-   # nn = @SVector ones(Int64, N) # for the moment, nn has to be only ones
-   nn = nn_list[k]
    @assert length(ll) == length(nn)
-   @time coeffs1, MM1 = O3.re_basis(cc, ll)
+   t1 = @elapsed coeffs1, MM1 = O3.re_basis(cc, ll)
    nbas_ri1 = size(coeffs1, 1)
    rank(coeffs1, rtol = 1e-12)
 
@@ -166,12 +199,11 @@ for k in 1:length(ll_list)
    U, S, V = svd(Xsym)
    coeffs_ind1 = Diagonal(S[1:rk1]) \ (U[:, 1:rk1]' * coeffs1)
 
-
    # Version GD
-   @time coeffs_rpi, MM_rpi = MatFmi(nn,ll)
-   @show size(coeffs_rpi)
-   @time coeffs2, MM2 = ri_basis_new(ll)
-   @show size(coeffs2)
+   t_rpi = @elapsed coeffs_rpi, MM_rpi = MatFmi(nn,ll)
+   # @show size(coeffs_rpi)
+   t2 = @elapsed coeffs2, MM2 = ri_basis_new(ll)
+   # @show size(coeffs2)
 
    rk2 = rank(coeffs_rpi,rtol = 1e-12)
    @test rk1 == rk2 
@@ -210,4 +242,10 @@ for k in 1:length(ll_list)
 
    # Check that values span same space
    @test rank([BB1;BB2], rtol = 1e-12) == rk2
+
+   if verbose 
+      @info("Test $itest: t1 = $t1, t2 = $t2, t_rpi = $t_rpi")
+   else 
+      print(".")
+   end
 end
