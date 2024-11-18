@@ -28,26 +28,34 @@ end
 
 function SetLl0(l,N)
     set = Vector{Int64}[]
-    for k in abs(l[1]-l[2]):l[1]+l[2]
-        push!(set, [0; k])
-    end
-    for k in 3:N-1
+    if N==2
+        if l[1]==l[2]
+            return [[0;0]]
+        else 
+            return Vector{Int64}[]
+        end
+    else 
+        for k in abs(l[1]-l[2]):l[1]+l[2]
+            push!(set, [0; k])
+        end
+        for k in 3:N-1
+            setL=set
+            set=Vector{Int64}[]
+            for a in setL
+                for b in abs(a[k-1]-l[k]):a[k-1]+l[k]
+                    push!(set, [a; b])
+                end
+            end
+        end  
         setL=set
         set=Vector{Int64}[]
         for a in setL
-            for b in abs(a[k-1]-l[k]):a[k-1]+l[k]
-                push!(set, [a; b])
+            if a[N-1]==l[N]
+                push!(set, [a; 0])
             end
         end
+        return set
     end
-    setL=set
-    set=Vector{Int64}[]
-    for a in setL
-        if a[N-1]==l[N]
-            push!(set, [a; 0])
-        end
-    end
-    return set
 end
 
 function SetLl(l,N,L)
@@ -121,7 +129,7 @@ function ri_basis_new(l)
     L=SetLl0(l,N)
     r=size(L,1)
     if r==0 
-        return zeros(Float64, 0, 0)
+        return zeros(Float64, 1, 1), [zeros(Int64,N)]
     else 
         setML0=ML0(l,N)
         sizeML0=length(setML0)
@@ -244,7 +252,7 @@ function MatFmi(n,l)
     L=SetLl0(l,N)
     r=size(L,1)
     if r==0 
-        return zeros(Float64, 0, 0)
+        return zeros(Float64, 1, 1), [zeros(Int,N)]
     else 
         ML00 = ML0(l,N)
         setML0=Set(ML00)

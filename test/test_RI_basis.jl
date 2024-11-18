@@ -57,7 +57,8 @@ end
 # for the moment the code with generalized CG only works with L=0
 L = 0
 cc = Rot3DCoeffs(L)
-ll = SA[1,1,2,2,4]
+# ll = SA[1,1,2,2,4]
+ll = SA[1,1,1,1,1,1,1]
 
 # version with svd
 @time coeffs1, MM1 = O3.re_basis(cc, ll)

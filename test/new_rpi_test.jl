@@ -146,11 +146,11 @@ cc = Rot3DCoeffs(L)
 
 using Combinatorics
 
-lmax = 4 
+lmax = 4
 nmax = 4
 nnll_list = [] 
 
-for ORD = 2:4
+for ORD = 2:6
    for ll in with_replacement_combinations(0:lmax, ORD) 
       if !iseven(sum(ll)); continue; end 
       if sum(ll) > 2 * lmax; continue; end 
@@ -165,7 +165,7 @@ for ORD = 2:4
 end
 
 long_nnll_list = nnll_list 
-short_nnll_list = nnll_list[1:20:end]
+short_nnll_list = nnll_list[1:10:end]
 @show length(long_nnll_list)
 @show length(short_nnll_list)
 
@@ -185,7 +185,7 @@ for (itest, (nn, ll)) in enumerate(nnll_list)
    @assert length(ll) == length(nn)
    t1 = @elapsed coeffs1, MM1 = O3.re_basis(cc, ll)
    nbas_ri1 = size(coeffs1, 1)
-   rank(coeffs1, rtol = 1e-12)
+   # rank(coeffs1, rtol = 1e-12)
 
    Rs = rand_config(length(ll))
    Q = rand_rot() 
@@ -213,51 +213,53 @@ for (itest, (nn, ll)) in enumerate(nnll_list)
    # @show size(coeffs2)
 
    rk2 = rank(coeffs_rpi,rtol = 1e-12)
-   @test rk1 == rk2 
+   @test rk1 == rk2
 
-   U, S, V = svd(coeffs_rpi)
-   coeffs_ind2 = Diagonal(S[1:rk2]) \ (U[:, 1:rk2]' * coeffs2)
+   if rk1>0
+      U, S, V = svd(coeffs_rpi)
+      coeffs_ind2 = Diagonal(S[1:rk2]) \ (U[:, 1:rk2]' * coeffs2)
 
-   Xsym_new = rand_batch(; coeffs=coeffs_ind2, MM=MM2, ll=ll, nn=nn, batch=RR) #this is symmetric
-   @test rank(Xsym_new; rtol=1e-12) == rk2
+      Xsym_new = rand_batch(; coeffs=coeffs_ind2, MM=MM2, ll=ll, nn=nn, batch=RR) #this is symmetric
+      @test rank(Xsym_new; rtol=1e-12) == rk2
 
-   # NOTE FROM CO: same batch is used so can compare!!!
-   # @show rank(Xsym) 
-   # @show rank(Xsym_new)
-   # @show rank([Xsym; Xsym_new], rtol = 1e-12)
-
-
-   P1 = sortperm(MM1)
-   P2 = sortperm(MM2)
-   MMsorted1 = MM1[P1]
-   MMsorted2 = MM2[P2]
-   # check that same mm values
-   @test MMsorted1 == MMsorted2
-
-   coeffsp1 = coeffs_ind1[:,P1]
-   coeffsp2 = coeffs_ind2[:,P2]
-
-   # Check that coefficients span same space
-   @test rank([coeffsp1;coeffsp2], rtol = 1e-12) == rk2
+      # NOTE FROM CO: same batch is used so can compare!!!
+      # @show rank(Xsym) 
+      # @show rank(Xsym_new)
+      # @show rank([Xsym; Xsym_new], rtol = 1e-12)
 
 
-   # Do the rand batch on the same set of points
-   ORD = length(ll) # length of each group 
-   BB1 = zeros(size(coeffs_ind1, 1), ntest)
-   BB2 = zeros(size(coeffs_ind2, 1), ntest)
-   for i = 1:ntest 
-      # construct a random set of particles with 𝐫 ∈ ball(radius=1)
-      Rs = [ rand_ball() for _ in 1:ORD ]
-      BB1[:, i] = eval_basis(Rs; coeffs=coeffs_ind1, MM=MM1, ll=ll, nn=nn) 
-      BB2[:, i] = eval_basis(Rs; coeffs=coeffs_ind2, MM=MM2, ll=ll, nn=nn) 
-   end
+      P1 = sortperm(MM1)
+      P2 = sortperm(MM2)
+      MMsorted1 = MM1[P1]
+      MMsorted2 = MM2[P2]
+      # check that same mm values
+      @test MMsorted1 == MMsorted2
 
-   # Check that values span same space
-   @test rank([BB1;BB2], rtol = 1e-12) == rk2
+      coeffsp1 = coeffs_ind1[:,P1]
+      coeffsp2 = coeffs_ind2[:,P2]
 
-   if verbose 
-      @info("Test $itest: t1 = $t1, t2 = $t2, t_rpi = $t_rpi")
-   else 
-      print(".")
+      # Check that coefficients span same space
+      @test rank([coeffsp1;coeffsp2], rtol = 1e-12) == rk2
+
+
+      # Do the rand batch on the same set of points
+      ORD = length(ll) # length of each group 
+      BB1 = zeros(size(coeffs_ind1, 1), ntest)
+      BB2 = zeros(size(coeffs_ind2, 1), ntest)
+      for i = 1:ntest 
+         # construct a random set of particles with 𝐫 ∈ ball(radius=1)
+         Rs = [ rand_ball() for _ in 1:ORD ]
+         BB1[:, i] = eval_basis(Rs; coeffs=coeffs_ind1, MM=MM1, ll=ll, nn=nn) 
+         BB2[:, i] = eval_basis(Rs; coeffs=coeffs_ind2, MM=MM2, ll=ll, nn=nn) 
+      end
+
+      # Check that values span same space
+      @test rank([BB1;BB2], rtol = 1e-12) == rk2
+
+      if verbose 
+         @info("Test $itest: t1 = $t1, t2 = $t2, t_rpi = $t_rpi")
+      else 
+         print(".")
+      end
    end
 end
