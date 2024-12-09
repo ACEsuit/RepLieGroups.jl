@@ -151,7 +151,8 @@ nmax = 4
 nnll_list = [] 
 
 for ORD = 2:6
-   for ll in with_replacement_combinations(0:lmax, ORD) 
+   for ll in with_replacement_combinations(1:lmax, ORD) 
+      # 0 or 1 above ?
       if !iseven(sum(ll)); continue; end 
       if sum(ll) > 2 * lmax; continue; end 
       for Inn in CartesianIndices( ntuple(_->1:nmax, ORD) )
@@ -173,11 +174,11 @@ short_nnll_list = nnll_list[1:10:end]
 
 verbose = true 
 
-@info("Using short nnll list for testing")
-nnll_list = short_nnll_list
+# @info("Using short nnll list for testing")
+# nnll_list = short_nnll_list
 
-# @info("Using long nnll list for testing")
-# nnll_list = long_nnll_list
+@info("Using long nnll list for testing")
+nnll_list = long_nnll_list
 
 
 for (itest, (nn, ll)) in enumerate(nnll_list)
@@ -207,10 +208,8 @@ for (itest, (nn, ll)) in enumerate(nnll_list)
    coeffs_ind1 = Diagonal(S[1:rk1]) \ (U[:, 1:rk1]' * coeffs1)
 
    # Version GD
-   t_rpi = @elapsed coeffs_rpi, MM_rpi = MatFmi(nn,ll)
-   # @show size(coeffs_rpi)
-   t2 = @elapsed coeffs2, MM2 = ri_basis_new(ll)
-   # @show size(coeffs2)
+   t_rpi = @elapsed coeffs2, coeffs_rpi, MMmat, MM2 = ri_rpi(nn,ll)
+   # computes the RI coupling coefs and RPI coefs at the same time
 
    rk2 = rank(coeffs_rpi,rtol = 1e-12)
    @test rk1 == rk2
@@ -257,7 +256,7 @@ for (itest, (nn, ll)) in enumerate(nnll_list)
       @test rank([BB1;BB2], rtol = 1e-12) == rk2
 
       if verbose 
-         @info("Test $itest: t1 = $t1, t2 = $t2, t_rpi = $t_rpi")
+         @info("Test $itest: t1 = $t1, t_rpi = $t_rpi")
       else 
          print(".")
       end

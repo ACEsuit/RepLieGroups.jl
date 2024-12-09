@@ -4,7 +4,7 @@ using PartialWaveFunctions
 using Combinatorics
 using LinearAlgebra
 
-export re_basis_new, ri_basis_new, ind_corr_s1, ind_corr_s2, MatFmi, ML0
+export re_basis_new, ri_basis_new, ind_corr_s1, ind_corr_s2, MatFmi, ML0, MatFmi2, ri_rpi
 
 function CG(l,m,L,N) 
     M=m[1]+m[2]
@@ -269,4 +269,120 @@ function MatFmi(n,l)
         end
     end
     return Matrix, ML00
+end
+
+
+# Function that computes the matrix ( f(m,i) )
+function MatFmi2(n,l)
+    N=size(l,1)
+    L=SetLl0(l,N)
+    r=size(L,1)
+    if r==0 
+        return zeros(Float64, 1, 1), [zeros(Int,N)]
+    else 
+        ML00 = ML0(l,N)
+        setML0=Set(ML00)
+        sigma = Snl(N,n,l)
+        setclass=class(setML0,sigma,N,l)
+        sizeML0=length(setclass)
+        sizeMMs=length(ML00)
+        FMatrix=zeros(Float64, r, sizeML0)
+        UMatrix=zeros(Float64, r, sizeMMs)
+        MM = []
+        for i in 1:r
+            c = 1
+            for j in 1:sizeML0
+                for m in setclass[j]
+                    cg_coef = CG(l,m,L[i],N)
+                    FMatrix[i,j]+= cg_coef
+                    UMatrix[i,c] = cg_coef
+                    c += 1
+                end
+            end
+        end
+        for j in 1:sizeML0
+            for m in setclass[j]
+                push!(MM,m)
+            end
+        end      
+    end
+    return UMatrix, FMatrix, ML00, MM
+end
+
+
+function Sn(nn,ll)
+    # should assert that lexicographical order
+    N = length(ll)
+    @assert length(ll) == length(nn)
+    perm_indices = [1]
+    for i in 2:N
+        if ll[i] != ll[perm_indices[end]] || nn[i] != nn[perm_indices[end]]
+            push!(perm_indices,i)
+        end
+    end
+    return [perm_indices;N+1]
+end
+
+function submset(lmax, lth)
+    # lmax for subsection, lth is the size of the subsection
+    if lth == 1
+        return [[l] for l in -lmax:lmax]
+    else
+        tmp = submset(lmax, lth-1)
+        mset = Vector{Vector{Int64}}([])
+        for t in tmp
+            set = identity.([[t..., l] for l in t[end]:lmax])
+            push!(mset, set...)
+        end
+    end
+    return mset
+end
+
+function m_generate(n,l)
+    S = Sn(n,l)
+    Nperm = length(S)-1
+    ordered_mset = [submset(l[S[i]], S[i+1]-S[i]) for i = 1:Nperm]
+    MM = []
+    Total_length = 0
+    for m_ord in Iterators.product(ordered_mset...)
+        m_ord_reshape = vcat(m_ord...)
+        if sum(m_ord_reshape) == 0
+            class_m = vcat(Iterators.product([multiset_permutations(m_ord[i], S[i+1]-S[i]) for i in 1:Nperm]...)...)
+            push!(MM, [vcat(mm...) for mm in class_m])
+            Total_length += length(class_m)
+        end
+    end
+    return MM, Total_length
+end
+
+function ri_rpi(n,l)
+    N=size(l,1)
+    L=SetLl0(l,N)
+    r=size(L,1)
+    if r==0 
+        return zeros(Float64, 1, 1), zeros(Float64, 1, 1), [zeros(Int,N)], [zeros(Int,N)] 
+    else 
+        MMmat, size_m = m_generate(n,l)
+        FMatrix=zeros(Float64, r, length(MMmat))
+        UMatrix=zeros(Float64, r, size_m)
+        MM = []
+        for i in 1:r
+            c = 0
+            for (j,m_class) in enumerate(MMmat)
+                for m in m_class
+                    c += 1
+                    cg_coef = CG(l,m,L[i],N)
+                    FMatrix[i,j]+= cg_coef
+                    UMatrix[i,c] = cg_coef
+                end
+            end
+            @assert c==size_m
+        end 
+        for m_class in MMmat
+            for m in m_class
+                push!(MM,m)
+            end
+        end      
+    end
+    return UMatrix, FMatrix, MMmat, MM
 end
