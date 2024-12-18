@@ -26,6 +26,7 @@ function CG(l,m,L,N)
     return C
 end
 
+# The variables of this function are fully inherited from the first ACE paper
 function CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N::Int64) where N
     # @assert -L[N] ≤ M_N ≤ L[N] 
     if M_N ≠ sum(m) || L[1] < abs(m[1])
@@ -45,6 +46,7 @@ function CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N:
     return C
 end
 
+# Only when M_N = sum(m) can the CG coefficient be non-zero, so when missing M_N, we return the only one element that can possibly be non-zero
 CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64}) where N = CG_new(l,m,L,sum(m))
 
 function SetLl0(l,N)
@@ -103,6 +105,7 @@ function SetLl(l,N,L)
     return set
 end
 
+# Function that return a L set given an `l`. The elements of the set start with l[1] and end with L. 
 function SetLl_new(l::SVector{N,Int64}, L::Int64) where N
     T = typeof(l)
     if N==2        
