@@ -27,7 +27,7 @@ function CG(l,m,L,N)
 end
 
 function CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N::Int64) where N
-    @assert -L[N] ≤ M_N ≤ L[N] 
+    # @assert -L[N] ≤ M_N ≤ L[N] 
     if M_N ≠ sum(m) || L[1] < abs(m[1])
         return 0.
     end
@@ -44,6 +44,8 @@ function CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N:
     end
     return C
 end
+
+CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64}) where N = CG_new(l,m,L,sum(m))
 
 function SetLl0(l,N)
     set = Vector{Int64}[]
@@ -104,7 +106,7 @@ end
 function SetLl_new(l::SVector{N,Int64}, L::Int64) where N
     T = typeof(l)
     if N==2        
-        return abs(l[1]-l[2]) ≤ L ≤ l[1] + l[2] ? [ [T(l[1],L)] ] : Vector{T}[]
+        return abs(l[1]-l[2]) ≤ L ≤ l[1] + l[2] ? [T(l[1],L)] : Vector{T}[]
     end
     
     set = [ [l[1];] ]
