@@ -27,7 +27,7 @@ function CG(l,m,L,N)
 end
 
 # The variables of this function are fully inherited from the first ACE paper
-function CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N::Int64) where N
+function CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N::Int64;) where N
     # @assert -L[N] ≤ M_N ≤ L[N] 
     if M_N ≠ sum(m) || L[1] < abs(m[1])
         return 0.
@@ -46,8 +46,11 @@ function CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N:
     return C
 end
 
-# Only when M_N = sum(m) can the CG coefficient be non-zero, so when missing M_N, we return the only one element that can possibly be non-zero
-CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64}) where N = CG_new(l,m,L,sum(m))
+# Only when M_N = sum(m) can the CG coefficient be non-zero, so when missing M_N, we return either 
+# (1)the full CG coefficient given l, m and L, as a rank 1 vector; 
+# (2)or the only one element that can possibly be non-zero on the above vector.
+# I suspect that the first option will not be used anyhow, but I keep it for now.
+CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64};vectorize::Bool=false) where N = vectorize ? CG_new(l,m,L,sum(m)) * Float64.(I(2N+1)[sum(m)+N+1]) : CG_new(l,m,L,sum(m))
 
 function SetLl0(l,N)
     set = Vector{Int64}[]
@@ -105,7 +108,7 @@ function SetLl(l,N,L)
     return set
 end
 
-# Function that return a L set given an `l`. The elements of the set start with l[1] and end with L. 
+# Function that returns a L set given an `l`. The elements of the set start with l[1] and end with L. 
 function SetLl_new(l::SVector{N,Int64}, L::Int64) where N
     T = typeof(l)
     if N==2        
@@ -173,6 +176,33 @@ function ML(l,N,L)
     end
     return setML0
 end
+
+# Function that returns a set of all possible m's given an `l` with sum of m's equaling to k.
+function Mlk(l::SVector{N,Int64}, k::Int64) where N
+    T = typeof(l)
+    setMlk = [[i] for i in -abs(l[1]):abs(l[1])]
+    for i in 2:N
+        set = setMlk
+        setMlk = Vector{Int64}[]
+        if i < N
+            for m in set
+                append!(setMlk, [m; li] for li in -abs(l[i]):abs(l[i]) )
+            end
+        else
+            for m in set
+                s = sum(m)
+                if abs(k-s) ≤ abs(l[N])
+                    push!(setMlk, [m; k-s])
+                end
+            end
+        end
+    end
+
+    return T.(setMlk)
+end
+
+# Function that returns a set of all possible m's given an `l` with the absolute value of sum of m's being smaller than L
+MlL(l::SVector{N,Int64}, L::Int64) where N = sort(union([Mlk(l, k) for k in -L:L]...))
 
 function ri_basis_new(l)
     N=size(l,1)

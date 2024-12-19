@@ -2,7 +2,7 @@ using StaticArrays, LinearAlgebra, RepLieGroups
 using Test
 
 N_test = 100
-@info "Testing consistency of SetLl_new and SetLl and SetLl0 && CG_new and CG"
+@info "Testing consistency of SetLl_new and SetLl and SetLl0 && CG_new and CG && MlL and ML"
 for _ = 1:N_test
     # SetLl_new vs SetLl
     N = rand(3:5) # SetLl has a bug when N=2 so here N starts from 3
@@ -18,6 +18,9 @@ for _ = 1:N_test
     SL1 = RepLieGroups.SetLl_new(l,0)
     SL2 = RepLieGroups.SetLl0(l,N)
     @test [ SL1[i][2:end] for i in 1:length(SL1) ] == [ SL2[i][2:end] for i in 1:length(SL2) ]
+    mset1 = RepLieGroups.ML(l,N,L)
+    mset2 = RepLieGroups.MlL(l,L)
+    @test mset1 == mset2
 
     # CG_new vs CG
     L = rand(0:5)
