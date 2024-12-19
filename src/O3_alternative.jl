@@ -50,7 +50,7 @@ end
 # (1)the full CG coefficient given l, m and L, as a rank 1 vector; 
 # (2)or the only one element that can possibly be non-zero on the above vector.
 # I suspect that the first option will not be used anyhow, but I keep it for now.
-CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64};vectorize::Bool=false) where N = vectorize ? CG_new(l,m,L,sum(m)) * Float64.(I(2N+1)[sum(m)+N+1]) : CG_new(l,m,L,sum(m))
+CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64};vectorize::Bool=false) where N = vectorize ? CG_new(l,m,L,sum(m)) * Float64.(I(2N+1)[sum(m)+N+1,:]) : CG_new(l,m,L,sum(m))
 
 function SetLl0(l,N)
     set = Vector{Int64}[]
@@ -488,7 +488,7 @@ function re_rpe(n::SVector{N,Int64},l::SVector{N,Int64},L::Int64) where N
             for (j,m_class) in enumerate(MMmat)
                 for m in m_class
                     c += 1
-                    cg_coef = CG_new(l,m,Lset[i];vectorize = L != 0)
+                    cg_coef = L == 0 ? CG_new(l,m,Lset[i]) : CG_new(l,m,Lset[i]) * Float64.(I(2L+1)[sum(m)+L+1,:])
                     FMatrix[i,j]+= cg_coef
                     UMatrix[i,c] = cg_coef
                 end
