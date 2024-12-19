@@ -209,17 +209,23 @@ for (itest, (nn, ll)) in enumerate(nnll_list)
 
    # Version GD
    t_rpi = @elapsed coeffs2, coeffs_rpi, MMmat, MM2 = ri_rpi(nn,ll)
+   t_rpe = @elapsed coeffs3, coeffs_rpe, MMmat, MM3 = re_rpe(nn,ll,0)
    # computes the RI coupling coefs and RPI coefs at the same time
 
    rk2 = rank(coeffs_rpi,rtol = 1e-12)
-   @test rk1 == rk2
+   rk3 = rank(coeffs_rpe,rtol = 1e-12)
+   @test rk1 == rk2 == rk3
 
    if rk1>0
       U, S, V = svd(coeffs_rpi)
       coeffs_ind2 = Diagonal(S[1:rk2]) \ (U[:, 1:rk2]' * coeffs2)
+      U, S, V = svd(coeffs_rpe)
+      coeffs_ind3 = Diagonal(S[1:rk3]) \ (U[:, 1:rk3]' * coeffs3)
 
       Xsym_new = rand_batch(; coeffs=coeffs_ind2, MM=MM2, ll=ll, nn=nn, batch=RR) #this is symmetric
+      Xsym_new2 = rand_batch(; coeffs=coeffs_ind3, MM=MM3, ll=ll, nn=nn, batch=RR) #this is symmetric
       @test rank(Xsym_new; rtol=1e-12) == rk2
+      @test rank(Xsym_new2; rtol=1e-12) == rk3
 
       # NOTE FROM CO: same batch is used so can compare!!!
       # @show rank(Xsym) 
@@ -229,34 +235,41 @@ for (itest, (nn, ll)) in enumerate(nnll_list)
 
       P1 = sortperm(MM1)
       P2 = sortperm(MM2)
+      P3 = sortperm(MM3)
       MMsorted1 = MM1[P1]
       MMsorted2 = MM2[P2]
+      MMsorted3 = MM3[P3]
       # check that same mm values
-      @test MMsorted1 == MMsorted2
+      @test MMsorted1 == MMsorted2 == MMsorted3
 
       coeffsp1 = coeffs_ind1[:,P1]
       coeffsp2 = coeffs_ind2[:,P2]
+      coeffsp3 = coeffs_ind3[:,P3]
 
       # Check that coefficients span same space
       @test rank([coeffsp1;coeffsp2], rtol = 1e-12) == rk2
+      @test rank([coeffsp1;coeffsp3], rtol = 1e-12) == rk3
 
 
       # Do the rand batch on the same set of points
       ORD = length(ll) # length of each group 
       BB1 = zeros(size(coeffs_ind1, 1), ntest)
       BB2 = zeros(size(coeffs_ind2, 1), ntest)
+      BB3 = zeros(size(coeffs_ind3, 1), ntest)
       for i = 1:ntest 
          # construct a random set of particles with 𝐫 ∈ ball(radius=1)
          Rs = [ rand_ball() for _ in 1:ORD ]
          BB1[:, i] = eval_basis(Rs; coeffs=coeffs_ind1, MM=MM1, ll=ll, nn=nn) 
          BB2[:, i] = eval_basis(Rs; coeffs=coeffs_ind2, MM=MM2, ll=ll, nn=nn) 
+         BB3[:, i] = eval_basis(Rs; coeffs=coeffs_ind3, MM=MM3, ll=ll, nn=nn)
       end
 
       # Check that values span same space
       @test rank([BB1;BB2], rtol = 1e-12) == rk2
+      @test rank([BB1;BB3], rtol = 1e-12) == rk3
 
       if verbose 
-         @info("Test $itest: t1 = $t1, t_rpi = $t_rpi")
+         @info("Test $itest: t1 = $t1, t_rpi = $t_rpi, t_rpe = $t_rpe")
       else 
          print(".")
       end

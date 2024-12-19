@@ -4,7 +4,7 @@ using PartialWaveFunctions
 using Combinatorics
 using LinearAlgebra
 
-export re_basis_new, ri_basis_new, ind_corr_s1, ind_corr_s2, MatFmi, ML0, MatFmi2, ri_rpi
+export re_basis_new, ri_basis_new, ind_corr_s1, ind_corr_s2, MatFmi, ML0, MatFmi2, ri_rpi, re_rpe
 
 function CG(l,m,L,N) 
     M=m[1]+m[2]
@@ -419,7 +419,7 @@ function submset(lmax, lth)
 end
 
 # Function that generates the set of ordered m's given `n` and `l` with sum of m's equaling to k.
-function m_generate(n,l,L,k)
+function m_generate(n::T,l::T,L,k) where T
     @assert abs(k) ≤ L
     S = Sn(n,l)
     Nperm = length(S)-1
@@ -434,7 +434,7 @@ function m_generate(n,l,L,k)
             Total_length += length(class_m)
         end
     end
-    return MM, Total_length
+    return [ T.(MM[i]) for i = 1:length(MM) ], Total_length
 end
 
 # Function that generates the set of ordered m's given `n` and `l` with the abosolute sum of m's being smaller than L.
@@ -457,6 +457,38 @@ function ri_rpi(n,l)
                 for m in m_class
                     c += 1
                     cg_coef = CG(l,m,L[i],N)
+                    FMatrix[i,j]+= cg_coef
+                    UMatrix[i,c] = cg_coef
+                end
+            end
+            @assert c==size_m
+        end 
+        for m_class in MMmat
+            for m in m_class
+                push!(MM,m)
+            end
+        end      
+    end
+    return UMatrix, FMatrix, MMmat, MM
+end
+
+function re_rpe(n::SVector{N,Int64},l::SVector{N,Int64},L::Int64) where N
+    Lset = SetLl_new(l,L)
+    r = length(Lset)
+    T = L == 0 ? Float64 : SVector{2L+1,Float64}
+    if r == 0 
+        return zeros(T, 1, 1), zeros(T, 1, 1), [zeros(Int,N)], [zeros(Int,N)]
+    else 
+        MMmat, size_m = m_generate(n,l,L)
+        FMatrix=zeros(T, r, length(MMmat))
+        UMatrix=zeros(T, r, size_m)
+        MM = []
+        for i in 1:r
+            c = 0
+            for (j,m_class) in enumerate(MMmat)
+                for m in m_class
+                    c += 1
+                    cg_coef = CG_new(l,m,Lset[i];vectorize = L != 0)
                     FMatrix[i,j]+= cg_coef
                     UMatrix[i,c] = cg_coef
                 end
