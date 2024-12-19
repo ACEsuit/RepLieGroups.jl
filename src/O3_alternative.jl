@@ -404,7 +404,7 @@ function Sn(nn,ll)
 end
 
 function submset(lmax, lth)
-    # lmax for subsection, lth is the size of the subsection
+    # lmax stands for the l value of the subsection while lth is the length of this subsection
     if lth == 1
         return [[l] for l in -lmax:lmax]
     else
@@ -418,7 +418,9 @@ function submset(lmax, lth)
     return mset
 end
 
-function m_generate(n,l)
+# Function that generates the set of ordered m's given `n` and `l` with sum of m's equaling to k.
+function m_generate(n,l,L,k)
+    @assert abs(k) ≤ L
     S = Sn(n,l)
     Nperm = length(S)-1
     ordered_mset = [submset(l[S[i]], S[i+1]-S[i]) for i = 1:Nperm]
@@ -426,7 +428,7 @@ function m_generate(n,l)
     Total_length = 0
     for m_ord in Iterators.product(ordered_mset...)
         m_ord_reshape = vcat(m_ord...)
-        if sum(m_ord_reshape) == 0
+        if sum(m_ord_reshape) == k
             class_m = vcat(Iterators.product([multiset_permutations(m_ord[i], S[i+1]-S[i]) for i in 1:Nperm]...)...)
             push!(MM, [vcat(mm...) for mm in class_m])
             Total_length += length(class_m)
@@ -434,6 +436,9 @@ function m_generate(n,l)
     end
     return MM, Total_length
 end
+
+# Function that generates the set of ordered m's given `n` and `l` with the abosolute sum of m's being smaller than L.
+m_generate(n,l,L=0) = union([m_generate(n,l,L,k)[1] for k in -L:L]...), sum(m_generate(n,l,L,k)[2] for k in -L:L)
 
 function ri_rpi(n,l)
     N=size(l,1)
