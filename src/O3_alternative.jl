@@ -4,7 +4,7 @@ using PartialWaveFunctions
 using Combinatorics
 using LinearAlgebra
 
-export re_basis_new, ri_basis_new, ind_corr_s1, ind_corr_s2, MatFmi, ML0, MatFmi2, ri_rpi, re_rpe
+export re_basis_new, ri_basis_new, ind_corr_s1, ind_corr_s2, MatFmi, ML0, MatFmi2, ri_rpi, re_rpe, rpe_basis_new
 
 function CG(l,m,L,N) 
     M=m[1]+m[2]
@@ -503,3 +503,22 @@ function re_rpe(n::SVector{N,Int64},l::SVector{N,Int64},L::Int64) where N
     end
     return UMatrix, FMatrix, MMmat, MM
 end
+
+function gram(X)
+    G = zeros(ComplexF64, size(X,1), size(X,1))
+    for i = 1:size(X,1)
+       for j = i:size(X,1)
+          G[i,j] = sum(dot(X[i,t], X[j,t]') for t = 1:size(X,2))
+          i == j ? nothing : (G[j,i]=G[i,j]')
+       end
+    end
+    return G
+ end
+
+ function rpe_basis_new(nn::SVector{N, Int64}, ll::SVector{N, Int64}, L::Int64) where N
+    t_re = @elapsed UMatrix, FMatrix, MMmat, MM = re_rpe(nn, ll, L)
+    @show t_re # should be removed in the final version
+    U, S, V = svd(gram(FMatrix))
+    rk = rank(Diagonal(S); rtol =  1e-12)
+    return Diagonal(S[1:rk]) * (U[:, 1:rk]' * UMatrix), MM
+ end
