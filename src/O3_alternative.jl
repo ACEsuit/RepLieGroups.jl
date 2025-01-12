@@ -504,8 +504,8 @@ function re_rpe(n::SVector{N,Int64},l::SVector{N,Int64},L::Int64) where N
     return UMatrix, FMatrix, MMmat, MM
 end
 
-function gram(X)
-    G = zeros(ComplexF64, size(X,1), size(X,1))
+function gram(X::Matrix{SVector{N,T}}) where {N,T}
+    G = zeros(T, size(X,1), size(X,1))
     for i = 1:size(X,1)
        for j = i:size(X,1)
           G[i,j] = sum(dot(X[i,t], X[j,t]') for t = 1:size(X,2))
@@ -515,7 +515,9 @@ function gram(X)
     return G
  end
 
- function rpe_basis_new(nn::SVector{N, Int64}, ll::SVector{N, Int64}, L::Int64) where N
+ gram(X::Matrix{<:Number}) = X * X'
+
+function rpe_basis_new(nn::SVector{N, Int64}, ll::SVector{N, Int64}, L::Int64) where N
     t_re = @elapsed UMatrix, FMatrix, MMmat, MM = re_rpe(nn, ll, L)
     @show t_re # should be removed in the final version
     U, S, V = svd(gram(FMatrix))
