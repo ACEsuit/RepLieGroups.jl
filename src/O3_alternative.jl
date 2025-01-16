@@ -508,7 +508,7 @@ function gram(X::Matrix{SVector{N,T}}) where {N,T}
     G = zeros(T, size(X,1), size(X,1))
     for i = 1:size(X,1)
        for j = i:size(X,1)
-          G[i,j] = sum(dot(X[i,t], X[j,t]') for t = 1:size(X,2))
+          G[i,j] = sum(dot(X[i,t], X[j,t]) for t = 1:size(X,2))
           i == j ? nothing : (G[j,i]=G[i,j]')
        end
     end

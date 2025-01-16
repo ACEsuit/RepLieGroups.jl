@@ -1,6 +1,7 @@
 
 using SpheriCart, StaticArrays, LinearAlgebra, RepLieGroups, WignerD, 
       Combinatorics, Rotations
+using WignerD: wignerD
 using RepLieGroups.O3: Rot3DCoeffs, Rot3DCoeffs_real, Rot3DCoeffs_long, coco_dot
 using RepLieGroups: gram
 O3 = RepLieGroups.O3
