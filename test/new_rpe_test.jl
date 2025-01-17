@@ -193,7 +193,7 @@ for L = 0:4
    for ORD = 2:6
       for ll in with_replacement_combinations(1:lmax, ORD) 
          # 0 or 1 above ?
-         if !iseven(sum(ll)+L); continue; end 
+         if !iseven(sum(ll)+L); continue; end  # This is to ensure the reflection symmetry
          if sum(ll) > 2 * lmax; continue; end 
          for Inn in CartesianIndices( ntuple(_->1:nmax, ORD) )
             nn = [ Inn.I[α] for α = 1:ORD ]
