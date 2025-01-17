@@ -111,7 +111,9 @@ end
 # Function that returns a L set given an `l`. The elements of the set start with l[1] and end with L. 
 function SetLl_new(l::SVector{N,Int64}, L::Int64) where N
     T = typeof(l)
-    if N==2        
+    if N==1
+        return l[1] == L ? [T(l[1])] : Vector{T}[]
+    elseif N==2        
         return abs(l[1]-l[2]) ≤ L ≤ l[1] + l[2] ? [T(l[1],L)] : Vector{T}[]
     end
     
