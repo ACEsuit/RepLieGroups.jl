@@ -25,7 +25,6 @@ for _ = 1:N_test
     # CG_new vs CG
     L = rand(0:5) # order of equivariance
     m = RepLieGroups.MlL(l,L)[rand(1:length(RepLieGroups.MlL(l,L)))] # random m in ML
-    @show length(RepLieGroups.MlL(l,L))
 
     for LL in SL1 # Note: this LL has a different meaning than the L above, it is an element in the Ll set
         CG1 = RepLieGroups.CG_new(l,typeof(l)(m),LL)

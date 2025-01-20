@@ -143,9 +143,10 @@ function sym_rand_batch(; coeffs, MM, ll, nn,
 end
 
 # The following two functions are hacked from the EQM package, just using as reference and for comparison
+# they will be moved to RepLieGroups soon
 function rpe_basis(A::Union{Rot3DCoeffs,Rot3DCoeffs_long,Rot3DCoeffs_real}, nn::SVector{N, TN}, ll::SVector{N, Int}) where {N, TN}
    t_re_old = @elapsed Ure, Mre = O3.re_basis(A, ll)
-   @show t_re_old
+   # @show t_re_old
    G = _gramian(nn, ll, Ure, Mre)
    S = svd(G)
    rk = rank(Diagonal(S.S); rtol =  1e-7)
@@ -214,11 +215,11 @@ for L = 0:4
 
    verbose = true 
 
-   # @info("Using ultra short nnll list for testing")
-   # nnll_list = ultra_short_nnll_list
+   @info("Using ultra short nnll list for testing")
+   nnll_list = ultra_short_nnll_list
 
-   @info("Using short nnll list for testing")
-   nnll_list = short_nnll_list
+   # @info("Using short nnll list for testing")
+   # nnll_list = short_nnll_list
 
    # @info("Using long nnll list for testing")
    # nnll_list = long_nnll_list
@@ -254,6 +255,7 @@ for L = 0:4
       # @test norm(fRs1 - Ref(D) .* fRs1Q) < 1e-15
       fRs1 = eval_basis(Rs; coeffs = coeffs_ind1_origin, MM = MM1_origin, ll = ll, nn = nn)
       fRs1Q = eval_basis(QRs; coeffs = coeffs_ind1_origin, MM = MM1_origin, ll = ll, nn = nn)
+      # @info("Testing the equivariance of the old RPE basis")
       L == 0 ? (@test norm(fRs1 - fRs1Q) < 1e-14) : (@test norm(fRs1 - Ref(D) .* fRs1Q) < 1e-14)
 
       ntest = 1000
@@ -276,6 +278,7 @@ for L = 0:4
 
          # rk2 = rank(gram(coeffs2),rtol = 1e-12)
          rk2 = rank(gram(coeffs_ind2),rtol = 1e-12)
+         # @info("Testing rank_old = rank_new")
          @test rk1 == rk2
          
          Xsym_new = rand_batch(; coeffs=coeffs_ind2, MM=MM2, ll=ll, nn=nn, batch=RR) #this is symmetric
@@ -287,6 +290,7 @@ for L = 0:4
          # @show rank([Xsym; Xsym_new], rtol = 1e-12)
          fRs1 = eval_basis(Rs; coeffs = coeffs_ind2, MM = MM2, ll = ll, nn = nn)
          fRs1Q = eval_basis(QRs; coeffs = coeffs_ind2, MM = MM2, ll = ll, nn = nn)
+         # @info("Testing the equivariance of the new RPE basis")
          L == 0 ? (@test norm(fRs1 - fRs1Q) < 1e-14) : (@test norm(fRs1 - Ref(D) .* fRs1Q) < 1e-14)
          # Up to here, we checked that coeff_ind1_origin and coeff_ind2 has the same rank and span the space with correct equivariance, 
          # and hence they span the same space.
@@ -302,6 +306,7 @@ for L = 0:4
          coeffsp2 = coeffs_ind2[:,P2]
 
          # Check that coefficients span same space
+         # @info("Testing that the old and new coupling coefficients span the same space")
          @test rank(gram([coeffsp1;coeffsp2]); rtol=1e-12) == rank(gram(coeffsp1); rtol=1e-12) == rank(gram(coeffsp2); rtol=1e-12)
 
 

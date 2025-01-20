@@ -234,40 +234,33 @@ function clebschgordan(j1, m1, j2, m2, J, M, T=Float64)
    return T(sqrt(N) * G)
 end
 
-function Ctran(l::Int64,m::Int64,μ::Int64)
-   if abs(m) ≠ abs(μ)
-      return 0
-   elseif abs(m) == 0
-      return 1
-   elseif m < 0 && μ < 0
-      return - im * (-1)^m/sqrt(2) # 1/sqrt(2)
-   elseif m < 0 && μ > 0
-      return im/sqrt(2) # (-1)^m/sqrt(2)
-   elseif m > 0 && μ < 0
-      return (-1)^m/sqrt(2) # - im * (-1)^m/sqrt(2)
-   else
-      return 1/sqrt(2) # im/sqrt(2)
-   end
-end
+# transformation matrix from RSH to CSH for different conventions
+function Ctran(L::Int64; convention = :SpheriCart)
+	AA = zeros(ComplexF64, 2L+1, 2L+1)
+	order_dict = Dict(:SpheriCart => [1,2,3,4], :CondonShortley => [4,3,2,1], :FHIaims => [4,3,1,2])
+	for i = -L:L
+		val_list = [(-1)^(i), im, (-1)^(i+1)*im, 1] ./ sqrt(2)
+		for j in [-i, i]
+			AA[i+L+1,j+L+1] = begin
+				if i == j == 0
+					1
+				elseif i > 0 && j > 0
+					val_list[order_dict[convention][1]]
+				elseif i < 0 && j < 0
+					val_list[order_dict[convention][2]]
+				elseif i < 0 && j > 0
+					val_list[order_dict[convention][3]]
+				elseif i > 0 && j < 0
+					val_list[order_dict[convention][4]]
+				end
+			end
+		end
+	end
+	return sparse(AA)
+ end
 
-
-# function Ctran(l::Int64,m::Int64,μ::Int64)
-# 	if abs(m) ≠ abs(μ)
-# 	   return 0
-# 	elseif abs(m) == 0
-# 	   return 1
-# 	elseif m < 0 && μ < 0
-# 	   return - im * (-1)^m # 1/sqrt(2)
-# 	elseif m < 0 && μ > 0
-# 	   return im # (-1)^m/sqrt(2)
-# 	elseif m > 0 && μ < 0
-# 	   return (-1)^m # - im * (-1)^m/sqrt(2)
-# 	else
-# 	   return 1. # im/sqrt(2)
-# 	end
-#  end
-
-Ctran(l::Int64) = sparse(Matrix{ComplexF64}([ Ctran(l,m,μ) for m = -l:l, μ = -l:l ])) |> dropzeros
+# Ctran(l::Int64) = sparse(Matrix{ComplexF64}([ Ctran(l,m,μ) for m = -l:l, μ = -l:l ])) |> dropzeros
+Ctran(l::Int64,m::Int64,μ::Int64; convention = :SpheriCart) = Ctran(l;convention)[l+m+1,l+μ+1]
 
 ## NOTE: Ctran(L) is the transformation matrix from rSH to cSH. More specifically, 
 #        if we write Polynomials4ML rSH as R_{lm} and cSH as Y_{lm} and their corresponding 
