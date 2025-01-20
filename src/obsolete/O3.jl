@@ -413,12 +413,12 @@ function _compute_val(A::Rot3DCoeffs_real{L, T}, ll::StaticVector{N},
 	end
 	
 	function const1(m1,k1,m2,k2,n1,t1,n2,t2)
-		lmax = maximum([m1,k1,m2,k2,n1,t1,n2,t2])
+		lmax = maximum(abs.([m1,k1,m2,k2,n1,t1,n2,t2]))
 		return Ctran(lmax,m1,n1) * Ctran(lmax,k1,t1)' * Ctran(lmax,m2,n2) * Ctran(lmax,k2,t2)'
 	end
 	
 	function const2(n,t,p,q)
-		lmax = maximum([n,p,t,q])
+		lmax = maximum(abs.([n,p,t,q]))
 		return Ctran(lmax,p,n)' * Ctran(lmax,q,t)
 	end
 	
