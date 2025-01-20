@@ -142,13 +142,13 @@ for ntest = 1:100
             for μ in unique([μ1,-μ1])
                for μμ in unique([μ2,-μ2])
                   if abs(m+mm) ≤ λ && abs(μ+μμ) ≤ λ
-                     c1 = Ctran(l1,m1,m) * Ctran(l2,m2,mm) * Ctran(l1,μ1,μ)' * Ctran(l2,μ2,μμ)'
+                     c1 = Ctran(m1,m) * Ctran(m2,mm) * Ctran(μ1,μ)' * Ctran(μ2,μμ)'
                      c2 = clebschgordan(l1,m,l2,mm,λ,m+mm) * clebschgordan(l1,μ,l2,μμ,λ,μ+μμ)
                      # val2 += c1 * DDset[l1+1][m+l1+1,μ+l1+1] * DDset[l2+1][mm+l2+1,μμ+l2+1]
                      # val2 += c1 * c2 * DDset[λ+1][m+mm+λ+1,μ+μμ+λ+1]
                      for p in unique([m+mm,-m-mm])
                        for q in unique([μ+μμ,-μ-μμ])
-                          c3 = Ctran(l1+l2,p,m+mm)' * Ctran(l1+l2,q,μ+μμ)
+                          c3 = Ctran(p,m+mm)' * Ctran(q,μ+μμ)
                               val2 += c1 * c2 * c3 * Dset[λ+1][p+λ+1,q+λ+1]
                        end
                      end

@@ -235,32 +235,25 @@ function clebschgordan(j1, m1, j2, m2, J, M, T=Float64)
 end
 
 # transformation matrix from RSH to CSH for different conventions
-function Ctran(L::Int64; convention = :SpheriCart)
-	AA = zeros(ComplexF64, 2L+1, 2L+1)
+function Ctran(i::Int64,j::Int64;convention = :SpheriCart)
 	order_dict = Dict(:SpheriCart => [1,2,3,4], :CondonShortley => [4,3,2,1], :FHIaims => [4,3,1,2])
-	for i = -L:L
-		val_list = [(-1)^(i), im, (-1)^(i+1)*im, 1] ./ sqrt(2)
-		for j in [-i, i]
-			AA[i+L+1,j+L+1] = begin
-				if i == j == 0
-					1
-				elseif i > 0 && j > 0
-					val_list[order_dict[convention][1]]
-				elseif i < 0 && j < 0
-					val_list[order_dict[convention][2]]
-				elseif i < 0 && j > 0
-					val_list[order_dict[convention][3]]
-				elseif i > 0 && j < 0
-					val_list[order_dict[convention][4]]
-				end
-			end
-		end
+	val_list = [(-1)^(i), im, (-1)^(i+1)*im, 1] ./ sqrt(2)
+	if abs(i) != abs(j)
+		return 0 
+	elseif i == j == 0
+		return 1
+	elseif i > 0 && j > 0
+		return val_list[order_dict[convention][1]]
+	elseif i < 0 && j < 0
+		return val_list[order_dict[convention][2]]
+	elseif i < 0 && j > 0
+		return val_list[order_dict[convention][3]]
+	elseif i > 0 && j < 0
+		return val_list[order_dict[convention][4]]
 	end
-	return sparse(AA)
- end
+end
 
-# Ctran(l::Int64) = sparse(Matrix{ComplexF64}([ Ctran(l,m,μ) for m = -l:l, μ = -l:l ])) |> dropzeros
-Ctran(l::Int64,m::Int64,μ::Int64; convention = :SpheriCart) = Ctran(l;convention)[l+m+1,l+μ+1]
+Ctran(l::Int64) = sparse(Matrix{ComplexF64}([ Ctran(m,μ) for m = -l:l, μ = -l:l ])) |> dropzeros
 
 ## NOTE: Ctran(L) is the transformation matrix from rSH to cSH. More specifically, 
 #        if we write Polynomials4ML rSH as R_{lm} and cSH as Y_{lm} and their corresponding 
@@ -413,13 +406,13 @@ function _compute_val(A::Rot3DCoeffs_real{L, T}, ll::StaticVector{N},
 	end
 	
 	function const1(m1,k1,m2,k2,n1,t1,n2,t2)
-		lmax = maximum(abs.([m1,k1,m2,k2,n1,t1,n2,t2]))
-		return Ctran(lmax,m1,n1) * Ctran(lmax,k1,t1)' * Ctran(lmax,m2,n2) * Ctran(lmax,k2,t2)'
+		# lmax = maximum(abs.([m1,k1,m2,k2,n1,t1,n2,t2]))
+		return Ctran(m1,n1) * Ctran(k1,t1)' * Ctran(m2,n2) * Ctran(k2,t2)'
 	end
 	
 	function const2(n,t,p,q)
-		lmax = maximum(abs.([n,p,t,q]))
-		return Ctran(lmax,p,n)' * Ctran(lmax,q,t)
+		# lmax = maximum(abs.([n,p,t,q]))
+		return Ctran(p,n)' * Ctran(q,t)
 	end
 	
 	jmin = abs(ll[N-1]-ll[N])
