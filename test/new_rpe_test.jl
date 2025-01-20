@@ -302,7 +302,7 @@ for L = 0:4
          coeffsp2 = coeffs_ind2[:,P2]
 
          # Check that coefficients span same space
-         @test rank(gram([coeffsp1;coeffsp2]); rtol=1e-12) == rank(gram(coeffsp2); rtol=1e-12) == rank(gram(coeffsp2); rtol=1e-12)
+         @test rank(gram([coeffsp1;coeffsp2]); rtol=1e-12) == rank(gram(coeffsp1); rtol=1e-12) == rank(gram(coeffsp2); rtol=1e-12)
 
 
          # Do the rand batch on the same set of points
