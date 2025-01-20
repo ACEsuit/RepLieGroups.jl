@@ -16,12 +16,8 @@ function eval_basis(ll, Ure, Mll, X; Real = true)
    _convert = Real ? real : complex # identity
    val = _convert(zeros(typeof(Ure[1]), size(Ure,1)))
    
-   if Real
-      basis = RYlmBasis(sum(ll))
-   else
-      basis = CYlmBasis(sum(ll))
-   end
-   Ylm = [ evaluate(basis, x) for x in X ] 
+   basis = SphericalHarmonics(sum(ll))
+   Ylm = Real ? [ basis(x) for x in X ] : [ eval_cY(basis, x) for x in X ]
 
    for (i, mm) in enumerate(Mll)
       prod_Ylm = prod( Ylm[j][index_y(l, m)] 
@@ -168,120 +164,120 @@ println()
 
 # The following tests are now moved, in a new form, to new_rpe_test.jl
 
-# @info("Equivariance of coupled cSH based basis")  
-# for L = 0:2
-#    local cgen = Rot3DCoeffs(L)
-#    local maxl = [0, 7, 5, 3, 2]
-#    for ν = 2:5
-#       @info("Testing equivariance of coupled cSH based basis: L = $L, ν = $ν")
-#       for ntest = 1:(200 ÷ ν)
-#          local θ, ll, Ure, Mll, X, Q, B1, B2
-#          ll = rand(0:maxl[ν], ν)
-#          if !iseven(sum(ll)+L); continue; end 
-#          ll = SVector(ll...)      
-#          Ure, Mll = re_basis(cgen, ll)
-#          if size(Ure, 1) == 0; continue; end
+@info("Equivariance of coupled cSH based basis")  
+for L = 0:2
+   local cgen = Rot3DCoeffs(L)
+   local maxl = [0, 7, 5, 3, 2]
+   for ν = 2:5
+      @info("Testing equivariance of coupled cSH based basis: L = $L, ν = $ν")
+      for ntest = 1:(200 ÷ ν)
+         local θ, ll, Ure, Mll, X, Q, B1, B2
+         ll = rand(0:maxl[ν], ν)
+         if !iseven(sum(ll)+L); continue; end 
+         ll = SVector(ll...)      
+         Ure, Mll = re_basis(cgen, ll)
+         if size(Ure, 1) == 0; continue; end
 
-#          X = [ (@SVector rand(3)) for i in 1:length(ll) ]
-#          θ = rand(3) * 2pi
-#          Q = RotZYZ(θ...)
-#          B1 = eval_basis(ll, Ure, Mll, X; Real = false)
-#          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
-#          # TODO: combine into a single test 
-#          if L == 0
-#             print_tf(@test norm(B1 - B2)<1e-12)
-#          else
-#             D = transpose(wignerD(L, θ...))
-#             print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
-#          end
-#       end
-#       println()
-#    end
-# end
+         X = [ (@SVector rand(3)) for i in 1:length(ll) ]
+         θ = rand(3) * 2pi
+         Q = RotZYZ(θ...)
+         B1 = eval_basis(ll, Ure, Mll, X; Real = false)
+         B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
+         # TODO: combine into a single test 
+         if L == 0
+            print_tf(@test norm(B1 - B2)<1e-12)
+         else
+            D = transpose(wignerD(L, θ...))
+            print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
+         end
+      end
+      println()
+   end
+end
 
-# @info("Equivariance of coupled rSH based basis")  
-# # TODO: add tests for L = 1, 2, 3, 4
-# for L = 0:0
-#    local cgen = Rot3DCoeffs_real(L)
-#    local maxl = [0, 7, 5, 3, 2]
-#    for ν = 2:5
-#       @info("Testing equivariance of coupled rSH based basis: L = $L, ν = $ν")
-#       for ntest = 1:(200 ÷ ν)
-#          local θ, ll, Ure, Mll, X, Q, B1, B2
-#          ll = rand(0:maxl[ν], ν)
-#          if !iseven(sum(ll)+L); continue; end 
-#          ll = SVector(ll...)      
-#          Ure, Mll = re_basis(cgen, ll)
-#          if size(Ure, 1) == 0; continue; end
+@info("Equivariance of coupled rSH based basis")  
+# TODO: add tests for L = 1, 2, 3, 4
+for L = 0:0
+   local cgen = Rot3DCoeffs_real(L)
+   local maxl = [0, 7, 5, 3, 2]
+   for ν = 2:5
+      @info("Testing equivariance of coupled rSH based basis: L = $L, ν = $ν")
+      for ntest = 1:(200 ÷ ν)
+         local θ, ll, Ure, Mll, X, Q, B1, B2
+         ll = rand(0:maxl[ν], ν)
+         if !iseven(sum(ll)+L); continue; end 
+         ll = SVector(ll...)      
+         Ure, Mll = re_basis(cgen, ll)
+         if size(Ure, 1) == 0; continue; end
 
-#          X = [ (@SVector rand(3)) for i in 1:length(ll) ]
-#          θ = rand(3) * 2pi
-#          Q = RotZYZ(θ...)
-#          B1 = eval_basis(ll, Ure, Mll, X; Real = true)
-#          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = true)
-#          if L == 0
-#             print_tf(@test norm(B1 - B2)<1e-12)
-#          else
-#             D = Ctran(L) * transpose(wignerD(L, θ...)) * Ctran(L)'
-#             print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
-#          end
-#       end
-#       println()
-#    end
-# end
+         X = [ (@SVector rand(3)) for i in 1:length(ll) ]
+         θ = rand(3) * 2pi
+         Q = RotZYZ(θ...)
+         B1 = eval_basis(ll, Ure, Mll, X; Real = true)
+         B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = true)
+         if L == 0
+            print_tf(@test norm(B1 - B2)<1e-12)
+         else
+            D = Ctran(L) * transpose(wignerD(L, θ...)) * Ctran(L)'
+            print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
+         end
+      end
+      println()
+   end
+end
 
-# @info("Equivariance of coupled cSH based LONG basis")  
-# for L = 0:2
-#    cgen = Rot3DCoeffs_long(L)
-#    maxl = [0, 7, 5, 3, 2]
-#    for ν = 2:5
-#       @info("Testing equivariance of coupled cSH based LONG basis: L = $L, ν = $ν")
-#       for ntest = 1:(200 ÷ ν)
-#          local θ
-#          ll = rand(0:maxl[ν], ν)
-#          if L == 0 
-#             if !iseven(sum(ll)+L); continue; end 
-#          end
-#          ll = SVector(ll...)      
-#          Ure, Mll = re_basis(cgen, ll)
-#          if size(Ure, 1) == 0; continue; end
+@info("Equivariance of coupled cSH based LONG basis")  
+for L = 0:2
+   cgen = Rot3DCoeffs_long(L)
+   maxl = [0, 7, 5, 3, 2]
+   for ν = 2:5
+      @info("Testing equivariance of coupled cSH based LONG basis: L = $L, ν = $ν")
+      for ntest = 1:(200 ÷ ν)
+         local θ
+         ll = rand(0:maxl[ν], ν)
+         if L == 0 
+            if !iseven(sum(ll)+L); continue; end 
+         end
+         ll = SVector(ll...)      
+         Ure, Mll = re_basis(cgen, ll)
+         if size(Ure, 1) == 0; continue; end
 
-#          X = [ (@SVector rand(3)) for i in 1:length(ll) ]
-#          θ = rand(3) * 2pi
-#          Q = RotZYZ(θ...)
+         X = [ (@SVector rand(3)) for i in 1:length(ll) ]
+         θ = rand(3) * 2pi
+         Q = RotZYZ(θ...)
 
-#          B1 = eval_basis(ll, Ure, Mll, X; Real = false)
-#          B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
-#          D = BlockDiagonal([ transpose(wignerD(l, θ...)) for l = 0:L] )
-#          print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
-#       end
-#       println()
-#    end
-# end
+         B1 = eval_basis(ll, Ure, Mll, X; Real = false)
+         B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
+         D = BlockDiagonal([ transpose(wignerD(l, θ...)) for l = 0:L] )
+         print_tf(@test norm(B1 - Ref(D) .* B2)<1e-12)
+      end
+      println()
+   end
+end
 
-# @info("Testing equivariance of each 'subblock' of the cSH based LONG basis")  
-# Lmax = 4
-# cgen = Rot3DCoeffs_long(Lmax)
-# maxl = [0, 7, 5, 3, 2]
-# for ntest = 1:30
-#    local ν, ll, Ure, Mll, X, θ, Q, B1, B2
-#    ν = rand(2:5)
-#    ll = rand(0:maxl[ν], ν)
-#    ll = SVector(ll...)      
-#    Ure, Mll = re_basis(cgen, ll)
-#    if size(Ure, 1) == 0; continue; end
+@info("Testing equivariance of each 'subblock' of the cSH based LONG basis")  
+Lmax = 4
+cgen = Rot3DCoeffs_long(Lmax)
+maxl = [0, 7, 5, 3, 2]
+for ntest = 1:30
+   local ν, ll, Ure, Mll, X, θ, Q, B1, B2
+   ν = rand(2:5)
+   ll = rand(0:maxl[ν], ν)
+   ll = SVector(ll...)      
+   Ure, Mll = re_basis(cgen, ll)
+   if size(Ure, 1) == 0; continue; end
    
-#    X = [ (@SVector rand(3)) for i in 1:length(ll) ]
-#    θ = rand(3) * 2pi
-#    Q = RotZYZ(θ...)
+   X = [ (@SVector rand(3)) for i in 1:length(ll) ]
+   θ = rand(3) * 2pi
+   Q = RotZYZ(θ...)
    
-#    B1 = eval_basis(ll, Ure, Mll, X; Real = false)
-#    B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
+   B1 = eval_basis(ll, Ure, Mll, X; Real = false)
+   B2 = eval_basis(ll, Ure, Mll, Ref(Q) .* X; Real = false)
    
-#    for l = 0:Lmax
-#       B1l = [ B1[i][Val(l)] for i = 1:length(B1) ]
-#       B2l = [ B2[i][Val(l)] for i = 1:length(B2) ]
-#       D = transpose(wignerD(l, θ...))
-#       print_tf(@test norm(B1l - Ref(D) .* B2l)<1e-12)
-#    end
-# end
+   for l = 0:Lmax
+      B1l = [ B1[i][Val(l)] for i = 1:length(B1) ]
+      B2l = [ B2[i][Val(l)] for i = 1:length(B2) ]
+      D = transpose(wignerD(l, θ...))
+      print_tf(@test norm(B1l - Ref(D) .* B2l)<1e-12)
+   end
+end
