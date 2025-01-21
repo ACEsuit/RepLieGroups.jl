@@ -7,7 +7,7 @@ using LinearAlgebra
 export re_basis_new, ri_basis_new, ind_corr_s1, ind_corr_s2, MatFmi, ML0, MatFmi2, ri_rpi, re_rpe, rpe_basis_new
 
 # The generalized Clebsch Gordan Coefficients; variables of this function are fully inherited from the first ACE paper
-function CG_new(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N::Int64;) where N
+function GCG(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N::Int64;) where N
     # @assert -L[N] ≤ M_N ≤ L[N] 
     if M_N ≠ sum(m) || L[1] < abs(m[1])
         return 0.
@@ -30,7 +30,7 @@ end
 # (1)the full CG coefficient given l, m and L, as a rank 1 vector; 
 # (2)or the only one element that can possibly be non-zero on the above vector.
 # I suspect that the first option will not be used anyhow, but I keep it for now.
-CG(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64};vectorize::Bool=false) where N = vectorize ? CG_new(l,m,L,sum(m)) * Float64.(I(2L[N]+1)[sum(m)+L[N]+1,:]) : CG_new(l,m,L,sum(m))
+GCG(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64};vectorize::Bool=false) where N = vectorize ? GCG(l,m,L,sum(m)) * Float64.(I(2L[N]+1)[sum(m)+L[N]+1,:]) : GCG(l,m,L,sum(m))
 
 # Function that returns a L set given an `l`. The elements of the set start with l[1] and end with L. 
 function SetLl(l::SVector{N,Int64}, L::Int64) where N
@@ -129,7 +129,7 @@ function re_rpe(n::SVector{N,Int64},l::SVector{N,Int64},L::Int64) where N
             for (j,m_class) in enumerate(MMmat)
                 for m in m_class
                     c += 1
-                    cg_coef = CG(l,m,Lset[i];vectorize=(L!=0))
+                    cg_coef = GCG(l,m,Lset[i];vectorize=(L!=0))
                     FMatrix[i,j]+= cg_coef
                     UMatrix[i,c] = cg_coef
                 end
