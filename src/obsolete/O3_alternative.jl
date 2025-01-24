@@ -61,6 +61,8 @@ function SetLl(l::SVector{N,Int64}, L::Int64) where N
     return T.(set)
 end
 
+SetLl(l::SVector{N,Int64}) where N = union([SetLl(l, L) for L in 0:sum(l)]...)
+
 function Sn(nn,ll)
     # should assert that lexicographical order
     N = length(ll)
