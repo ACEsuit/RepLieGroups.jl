@@ -1,7 +1,7 @@
 using RepLieGroups
 using Test
 
-include("src/utils/utils_for_tests.jl")
+include("../src/utils/utils_for_tests.jl")
 
 @testset "RepLieGroups.jl" begin
     # Write your tests here.
