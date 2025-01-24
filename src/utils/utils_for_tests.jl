@@ -146,3 +146,27 @@ function eval_cheb(𝐫::AbstractVector, nmax)
     end
     return G
  end
+
+ ##
+
+function eval_basis(ll, Ure, Mll, X; Real = true)
+    @assert length(X) == length(ll)
+    @assert all(length.(X) .== 3) 
+ 
+    # NOTE: It seems that we will not go beyond vector valued functions in this package...?
+    _convert = Real ? real : complex # identity
+    val = _convert(zeros(typeof(Ure[1]), size(Ure,1)))
+    
+    basis = Real ? real_sphericalharmonics(maximum(ll)) : complex_sphericalharmonics(maximum(ll))
+    Ylm = [ basis(x) for x in X ]
+ 
+    for (i, mm) in enumerate(Mll)
+       prod_Ylm = prod( Ylm[j][index_y(l, m)] 
+                        for (j, (l, m)) in enumerate(zip(ll, mm)) )
+       val .+= _convert(Ure[:,i] * prod_Ylm)
+    end
+ 
+    return val 
+end
+ 
+index_y(l, m) = m + l + (l*l) + 1

@@ -4,8 +4,6 @@ using WignerD: wignerD
 using RepLieGroups.O3: Rot3DCoeffs
 using Test
 
-include("../src/utils/utils_for_tests.jl")
-
 # Test the new RPE basis up to L = 4
 for L = 0:4
    @info("Testing L = $L")

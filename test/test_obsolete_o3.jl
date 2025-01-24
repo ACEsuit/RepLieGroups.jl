@@ -1,49 +1,21 @@
 using Test, RepLieGroups, StaticArrays, Polynomials4ML, SpheriCart
 using RepLieGroups.O3: ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_real, Rot3DCoeffs_long, 
             re_basis, _mrange, MRange, Ctran, clebschgordan
-using Polynomials4ML: SphericalHarmonics # CYlmBasis, index_y, RYlmBasis 
+using Polynomials4ML: real_sphericalharmonics, complex_sphericalharmonics
 using Polynomials4ML.Testing: print_tf
 using LinearAlgebra
 using WignerD, Rotations, BlockDiagonals
 
 ##
-
-function eval_basis(ll, Ure, Mll, X; Real = true)
-   @assert length(X) == length(ll)
-   @assert all(length.(X) .== 3) 
-
-   # NOTE: It seems that we will not go beyond vector valued functions in this package...?
-   _convert = Real ? real : complex # identity
-   val = _convert(zeros(typeof(Ure[1]), size(Ure,1)))
-   
-   basis = SphericalHarmonics(sum(ll))
-   Ylm = Real ? [ basis(x) for x in X ] : [ eval_cY(basis, x) for x in X ]
-
-   for (i, mm) in enumerate(Mll)
-      prod_Ylm = prod( Ylm[j][index_y(l, m)] 
-                       for (j, (l, m)) in enumerate(zip(ll, mm)) )
-      val .+= _convert(Ure[:,i] * prod_Ylm)
-   end
-
-   return val 
-end
-
-function rand_rot() 
-   K = (@SMatrix randn(3,3))
-   K = K - K' 
-   return exp(K) 
-end
-
-##
 @info("Testing the correctness of Ctran(L)")
 Lmax = 4
-basis = SphericalHarmonics(Lmax)
-# basis2 = RYlmBasis(Lmax)
+basis = real_sphericalharmonics(Lmax)
+basis_c = complex_sphericalharmonics(Lmax)
 for L = 0:Lmax
    @info("Testing whether or not we found a correct transformation between cSH to rSH for L = $L")
    for ntest = 1:30
       x = @SVector rand(3)
-      Ylm = eval_cY(basis, x)[L^2+1:(L+1)^2]
+      Ylm = basis_c(x)[L^2+1:(L+1)^2]
       Ylm_r = basis(x)[L^2+1:(L+1)^2]
       print_tf(@test norm(Ctran(L)' * Ylm_r - collect(Ylm)) < 1e-12)
    end
@@ -52,14 +24,14 @@ end
 
 @info("Testing the D-matrix for cSH")
 Lmax = 4
-basis = SphericalHarmonics(Lmax)
+basis_c = complex_sphericalharmonics(Lmax)
 for ntest = 1:30
    local θ, Q
    x = @SVector rand(3)
    θ = rand(3) * 2pi
    Q = RotZYZ(θ...)
-   Ylm = eval_cY(basis, x)
-   Ylm_r = eval_cY(basis, Q * x)
+   Ylm = basis_c(x)
+   Ylm_r = basis_c(Q * x)
    for L = 0:Lmax
       YL = Ylm[L^2+1:(L+1)^2]
       YrL = Ylm_r[L^2+1:(L+1)^2]
@@ -97,7 +69,7 @@ println()
 
 @info("Testing the D-matrix for rSH")
 Lmax = 4
-basis = SphericalHarmonics(Lmax)
+basis = real_sphericalharmonics(Lmax)
 for ntest = 1:30
    local θ, Q
    x = @SVector rand(3)
@@ -162,7 +134,7 @@ for ntest = 1:100
 end
 println()
 
-# The following tests are now moved, in a new form, to new_rpe_test.jl
+# The following tests are to be moved, in a new form, to new_rpe_test.jl
 
 @info("Equivariance of coupled cSH based basis")  
 for L = 0:2
