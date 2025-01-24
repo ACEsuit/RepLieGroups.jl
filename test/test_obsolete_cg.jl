@@ -48,7 +48,6 @@ cg = ClebschGordan()
 # end
 
 ##
-index_y(l, m) = m + l + (l*l) + 1
 @info("Checking the SphH expansion in terms of CG coeffs")
 # expansion coefficients of a product of two spherical harmonics in terms a
 # single spherical harmonic
@@ -65,7 +64,8 @@ for ntest = 1:200
       R = SVector( cos(φ)*sin(θ), sin(φ)*sin(θ), cos(θ) )
       # evaluate all relevant Ylms (up to l1 + l2)
       
-      local Ylm =eval_cY(SphericalHarmonics(maximum(l1+l2)),R)
+      basis = complex_sphericalharmonics(maximum(l1+l2))
+      local Ylm = basis(R)
       # local Ylm = evaluate(CYlmBasis(l1+l2), R)
       # evaluate the product p = Y_l1_m1 * Y_l2_m2
       p = Ylm[index_y(l1,  m1)] * Ylm[index_y(l2,m2)]
