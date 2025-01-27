@@ -4,7 +4,7 @@ using PartialWaveFunctions
 using Combinatorics
 using LinearAlgebra
 
-export re_basis_new, ri_basis_new, ind_corr_s1, ind_corr_s2, MatFmi, ML0, MatFmi2, ri_rpi, re_rpe, rpe_basis_new
+export re_rpe, rpe_basis_new
 
 # The generalized Clebsch Gordan Coefficients; variables of this function are fully inherited from the first ACE paper
 function GCG(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N::Int64;) where N
