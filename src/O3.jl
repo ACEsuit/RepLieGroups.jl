@@ -251,7 +251,7 @@ function rpe_basis_new(nn::SVector{N, Int64}, ll::SVector{N, Int64}, L::Int64; f
     t_re = @elapsed UMatrix, FMatrix, MMmat, MM = re_rpe(nn, ll, L; flag = flag) # time of constructing the re_basis
     # @show t_re # should be removed in the final version
     U, S, V = svd(gram(FMatrix))
-    rk = findall(x -> x > 1e-11, S) |> length # rank(Diagonal(S); rtol =  1e-12) # Somehow rank is not working properly here - also this line is faster than sum(S.>1e-12)
+    rk = findall(x -> x > 1e-10, S) |> length # rank(Diagonal(S); rtol =  1e-12) # Somehow rank is not working properly here - also this line is faster than sum(S.>1e-12)
     return Diagonal(S[1:rk].^(-1/2)) * (U[:, 1:rk]' * UMatrix), MM
  end
 
