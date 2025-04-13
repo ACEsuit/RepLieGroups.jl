@@ -4,33 +4,63 @@ using PartialWaveFunctions
 using Combinatorics
 using LinearAlgebra
 
+using RepLieGroups.O3: Ctran
+
 export re_rpe, rpe_basis_new
 
 # The generalized Clebsch Gordan Coefficients; variables of this function are fully inherited from the first ACE paper
-function GCG(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N::Int64;) where N
+function GCG(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N::Int64;flag=:cSH) where N
     # @assert -L[N] ≤ M_N ≤ L[N] 
-    if M_N ≠ sum(m) || L[1] < abs(m[1])
+    if m_filter(m, M_N;flag=flag) == false || L[1] < abs(m[1])
         return 0.
     end
-    
-    M = m[1]
-    C = 1.
-    for k in 2:N
-        if L[k] < abs(M+m[k])
-            return 0.
-        else
-            C *= PartialWaveFunctions.clebschgordan(L[k-1],M,l[k],m[k],L[k],M+m[k])
-            M += m[k]
+
+    if flag == :cSH
+        M = m[1]
+        C = 1.
+        for k in 2:N
+            if L[k] < abs(M+m[k])
+                return 0.
+            else
+                C *= PartialWaveFunctions.clebschgordan(L[k-1],M,l[k],m[k],L[k],M+m[k])
+                M += m[k]
+            end
         end
+        return C
+    else
+        C = 0.
+        for M in signed_m(M_N)
+            ext_mset = filter( x -> sum(x) == M, signed_mmset(m) )
+        
+            for mm in ext_mset
+                mm = SA[mm...]
+                @assert sum(mm) == M
+                C_loc = GCG(l,mm,L,M;flag=:cSH)
+                coeff = Ctran(M_N,M;convention=flag)' * prod( RepLieGroups.O3.Ctran(m[i],mm[i];convention=flag) for i in 1:N )
+                C_loc *= coeff
+                C += C_loc
+            end
+        end
+        return abs(C - real(C)) < 1e-12 ? real(C) : C # We actually expect real values 
     end
-    return C
+
 end
 
 # Only when M_N = sum(m) can the CG coefficient be non-zero, so when missing M_N, we return either 
 # (1)the full CG coefficient given l, m and L, as a rank 1 vector; 
 # (2)or the only one element that can possibly be non-zero on the above vector.
 # I suspect that the first option will not be used anyhow, but I keep it for now.
-GCG(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64};vectorize::Bool=false) where N = vectorize ? GCG(l,m,L,sum(m)) * Float64.(I(2L[N]+1)[sum(m)+L[N]+1,:]) : GCG(l,m,L,sum(m))
+function GCG(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64};vectorize::Bool=true,flag=:cSH) where N 
+    if flag == :cSH
+        return vectorize ? GCG(l,m,L,sum(m);flag=flag) * Float64.(I(2L[N]+1)[sum(m)+L[N]+1,:]) : GCG(l,m,L,sum(m);flag=flag)
+    else
+        if vectorize == false && L[N] != 0
+            error("For the rSH basis, the CG coefficient is always a vector execpt for the case of L=0.")
+        else
+            return L[N] == 0 ? GCG(l,m,L,L[N];flag=flag) : SA[[ GCG(l,m,L,M_N;flag=flag) for M_N in -L[N]:L[N] ]...] 
+        end
+    end
+end
 
 # Function that returns a L set given an `l`. The elements of the set start with l[1] and end with L. 
 function SetLl(l::SVector{N,Int64}, L::Int64) where N
@@ -91,8 +121,26 @@ function submset(lmax, lth)
     return mset
 end
 
+signed_m(m) = unique([m,-m]) # The set of integers that has the same absolute value as m
+signed_mmset(m) = Iterators.product([signed_m(m[i]) for i in 1:length(m)]...) |> collect # The set of vectors whose i-th element has the same absolute value as m[i] for all i
+
+function m_filter(mm::Union{Vector{Int64},SVector{N,Int64}}, k::Int64; flag=:cSH) where N
+    if flag == :cSH
+        return sum(mm) == k
+    else
+        # for the rSH, the criterion is that whether there exists a combinition of [+/- m_i]_i, such that the sum of the combination equals to k
+     mmset = signed_mmset(mm)
+     for m in mmset
+      if sum(m) == k
+       return true
+      end
+     end
+     return false
+    end
+end
+
 # Function that generates the set of ordered m's given `n` and `l` with sum of m's equaling to k.
-function m_generate(n::T,l::T,L,k) where T
+function m_generate(n::T,l::T,L,k;flag=:cSH) where T
     @assert abs(k) ≤ L
     S = Sn(n,l)
     Nperm = length(S)-1
@@ -101,7 +149,7 @@ function m_generate(n::T,l::T,L,k) where T
     Total_length = 0
     for m_ord in Iterators.product(ordered_mset...)
         m_ord_reshape = vcat(m_ord...)
-        if sum(m_ord_reshape) == k
+        if m_filter(m_ord_reshape, k; flag = flag)
             class_m = vcat(Iterators.product([multiset_permutations(m_ord[i], S[i+1]-S[i]) for i in 1:Nperm]...)...)
             push!(MM, [vcat(mm...) for mm in class_m])
             Total_length += length(class_m)
@@ -111,18 +159,18 @@ function m_generate(n::T,l::T,L,k) where T
 end
 
 # Function that generates the set of ordered m's given `n` and `l` with the abosolute sum of m's being smaller than L.
-m_generate(n,l,L=0) = union([m_generate(n,l,L,k)[1] for k in -L:L]...), sum(m_generate(n,l,L,k)[2] for k in -L:L)
+m_generate(n,l,L;flag=:cSH) = union([m_generate(n,l,L,k;flag)[1] for k in -L:L]...), sum(length.(union([m_generate(n,l,L,k;flag)[1] for k in -L:L]...))) # orginal version: sum(m_generate(n,l,L,k;flag)[2] for k in -L:L), but this cannot be true anymore b.c. the m_classes can intersect
 
 
 # Function that generates the coupling coefficient of the RE basis given `n` and `l`., the FMatrix for generating the RPE basis is also generated here.
-function re_rpe(n::SVector{N,Int64},l::SVector{N,Int64},L::Int64) where N
+function re_rpe(n::SVector{N,Int64},l::SVector{N,Int64},L::Int64;flag=:cSH) where N
     Lset = SetLl(l,L)
     r = length(Lset)
     T = L == 0 ? Float64 : SVector{2L+1,Float64}
     if r == 0 
         return zeros(T, 1, 1), zeros(T, 1, 1), [zeros(Int,N)], [zeros(Int,N)]
     else 
-        MMmat, size_m = m_generate(n,l,L) # classes of m's
+        MMmat, size_m = m_generate(n,l,L;flag=flag) # classes of m's
         FMatrix=zeros(T, r, length(MMmat)) # Matrix containing f(m,i)
         UMatrix=zeros(T, r, size_m) # Matrix containing the the coupling coefficients D
         MM = [] # all possible m's
@@ -131,7 +179,7 @@ function re_rpe(n::SVector{N,Int64},l::SVector{N,Int64},L::Int64) where N
             for (j,m_class) in enumerate(MMmat)
                 for m in m_class
                     c += 1
-                    cg_coef = GCG(l,m,Lset[i];vectorize=(L!=0))
+                    cg_coef = GCG(l,m,Lset[i];vectorize=(L!=0),flag=flag)
                     FMatrix[i,j]+= cg_coef
                     UMatrix[i,c] = cg_coef
                 end
@@ -160,8 +208,8 @@ function gram(X::Matrix{SVector{N,T}}) where {N,T}
 
  gram(X::Matrix{<:Number}) = X * X'
 
-function rpe_basis_new(nn::SVector{N, Int64}, ll::SVector{N, Int64}, L::Int64) where N
-    t_re = @elapsed UMatrix, FMatrix, MMmat, MM = re_rpe(nn, ll, L) # time of constructing the re_basis
+function rpe_basis_new(nn::SVector{N, Int64}, ll::SVector{N, Int64}, L::Int64; flag = :cSH) where N
+    t_re = @elapsed UMatrix, FMatrix, MMmat, MM = re_rpe(nn, ll, L; flag = flag) # time of constructing the re_basis
     # @show t_re # should be removed in the final version
     U, S, V = svd(gram(FMatrix))
     rk = rank(Diagonal(S); rtol =  1e-12)

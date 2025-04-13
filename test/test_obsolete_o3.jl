@@ -169,7 +169,7 @@ end
 
 @info("Equivariance of coupled rSH based basis")  
 # TODO: add tests for L = 1, 2, 3, 4
-for L = 0:0
+for L = 0:4
    local cgen = Rot3DCoeffs_real(L)
    local maxl = [0, 7, 5, 3, 2]
    for ν = 2:5
@@ -179,7 +179,8 @@ for L = 0:0
          ll = rand(0:maxl[ν], ν)
          if !iseven(sum(ll)+L); continue; end 
          ll = SVector(ll...)      
-         Ure, Mll = re_basis(cgen, ll)
+         # Ure, Mll = re_basis(cgen, ll) # this one only works for L = 0
+         Ure, _, _, Mll = re_rpe(ll, ll, L; flag = :SpheriCart)
          if size(Ure, 1) == 0; continue; end
 
          X = [ (@SVector rand(3)) for i in 1:length(ll) ]

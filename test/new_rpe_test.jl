@@ -68,11 +68,11 @@ for L = 0:4
 
       # @test rank(gram(coeffs_ind1_origin); rtol=1e-12) <= rank(gram(coeffs_ind1); rtol=1e-12)
 
-      Rs = rand_config(length(ll))
-      θ = rand(3) * 2pi
-      Q = RotZYZ(θ...)
-      D = transpose(wignerD(L, θ...)) 
-      QRs = [Q*Rs[i] for i in 1:length(Rs)]
+      local Rs = rand_config(length(ll))
+      local θ = rand(3) * 2pi
+      local Q = RotZYZ(θ...)
+      local D = transpose(wignerD(L, θ...)) 
+      local QRs = [Q*Rs[i] for i in 1:length(Rs)]
       # fRs1 = eval_basis(Rs; coeffs = coeffs_ind1, MM = MM1, ll = ll, nn = nn)
       # fRs1Q = eval_basis(QRs; coeffs = coeffs_ind1, MM = MM1, ll = ll, nn = nn)
       # @test norm(fRs1 - Ref(D) .* fRs1Q) < 1e-15

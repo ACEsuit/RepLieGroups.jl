@@ -236,7 +236,11 @@ end
 
 # transformation matrix from RSH to CSH for different conventions
 function Ctran(i::Int64,j::Int64;convention = :SpheriCart)
-	order_dict = Dict(:SpheriCart => [1,2,3,4], :CondonShortley => [4,3,2,1], :FHIaims => [4,3,1,2])
+	if convention == :cSH
+		return i == j
+	end
+	
+	order_dict = Dict(:SpheriCart => [1,2,3,4], :CondonShortley => [4,3,2,1], :FHIaims => [4,2,3,1])
 	val_list = [(-1)^(i), im, (-1)^(i+1)*im, 1] ./ sqrt(2)
 	if abs(i) != abs(j)
 		return 0 

@@ -14,4 +14,6 @@ include("../src/utils/utils_for_tests.jl")
     @testset "O3" begin include("test_obsolete_o3.jl"); end
 
     @testset "O3 new" begin include("new_rpe_test.jl"); end
+
+    @testset "O3 new real" begin include("new_rpe_test_real.jl"); end
 end

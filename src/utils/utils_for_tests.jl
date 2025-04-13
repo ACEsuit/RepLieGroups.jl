@@ -1,5 +1,5 @@
 using SpheriCart, StaticArrays, Polynomials4ML
-using RepLieGroups.O3: Rot3DCoeffs, coco_dot, re_basis
+using RepLieGroups.O3: Rot3DCoeffs, Rot3DCoeffs_real, coco_dot, re_basis
 using RepLieGroups: gram
 using Polynomials4ML: complex_sphericalharmonics
 
@@ -29,7 +29,7 @@ function eval_cheb(𝐫::AbstractVector, nmax)
  
  # --------------------------------------------------
  
- function eval_basis(Rs; coeffs, MM, ll, nn)
+ function eval_basis(Rs; coeffs, MM, ll, nn, Real = false)
     @assert minimum(nn) >= 1 # radial basis indexing starts at 1 not 0. 
     @assert size(coeffs, 2) == length(MM) 
  
@@ -40,7 +40,7 @@ function eval_cheb(𝐫::AbstractVector, nmax)
     @assert length(Rs) == ORD # only for the non-sym basis!!
  
     # spherical harmonics 
-    basis = complex_sphericalharmonics(maximum(ll))
+    basis = Real ? real_sphericalharmonics(maximum(ll)) : complex_sphericalharmonics(maximum(ll))
     Y = [ basis(𝐫) for 𝐫 in Rs ]
  
     # radial basis 
@@ -60,7 +60,7 @@ function eval_cheb(𝐫::AbstractVector, nmax)
  end
  
  
- function eval_sym_basis(Rs; coeffs, MM, ll, nn)
+ function eval_sym_basis(Rs; coeffs, MM, ll, nn, Real = false)
     @assert minimum(nn) >= 1 # radial basis indexing starts at 1 not 0. 
     @assert size(coeffs, 2) == length(MM) 
  
@@ -70,7 +70,7 @@ function eval_cheb(𝐫::AbstractVector, nmax)
     @assert all( length(mm) == ORD for mm in MM )
  
     # spherical harmonics 
-    basis = complex_sphericalharmonics(maximum(ll))
+    basis = Real ? real_sphericalharmonics(maximum(ll)) : complex_sphericalharmonics(maximum(ll))
     Y = [ basis(𝐫) for 𝐫 in Rs ]
  
     # radial basis 
@@ -93,33 +93,33 @@ function eval_cheb(𝐫::AbstractVector, nmax)
  
  function rand_batch(; coeffs, MM, ll, nn, 
                        ntest = 100, 
-                       batch = make_batch(ntest, length(ll)) ) 
+                       batch = make_batch(ntest, length(ll)), Real = false) 
     if size(coeffs,1) == 0
        return zeros(valtype(coeffs), 0, length(batch))
     end
     BB = complex.(zeros(typeof(coeffs[1]), size(coeffs, 1), length(batch)))
     for (i, Rs) in enumerate(batch)
-       BB[:, i] = eval_basis(Rs; coeffs=coeffs, MM=MM, ll=ll, nn=nn) 
+       BB[:, i] = eval_basis(Rs; coeffs=coeffs, MM=MM, ll=ll, nn=nn, Real=Real) 
     end
     return BB
  end
  
  function sym_rand_batch(; coeffs, MM, ll, nn, 
                          ntest = 100, 
-                         batch = make_batch(ntest, length(ll)) ) 
+                         batch = make_batch(ntest, length(ll)), Real = false) 
     if size(coeffs,1) == 0
        return BB = zeros(valtype(coeffs), 0, length(batch))
     end
     BB = complex.(zeros(typeof(coeffs[1]), size(coeffs, 1), length(batch)))
     for (i, Rs) in enumerate(batch)
-       BB[:, i] = eval_sym_basis(Rs; coeffs=coeffs, MM=MM, ll=ll, nn=nn)
+       BB[:, i] = eval_sym_basis(Rs; coeffs=coeffs, MM=MM, ll=ll, nn=nn, Real=Real)
     end
     return BB
  end
  
  # The following two functions are hacked from the EQM package, just using as reference and for comparison
  # they will be moved to RepLieGroups soon
- function rpe_basis(A::Union{Rot3DCoeffs}, nn::SVector{N, TN}, ll::SVector{N, Int}) where {N, TN}
+ function rpe_basis(A::Union{Rot3DCoeffs,Rot3DCoeffs_real}, nn::SVector{N, TN}, ll::SVector{N, Int}) where {N, TN}
     t_re_old = @elapsed Ure, Mre = re_basis(A, ll)
     # @show t_re_old
     G = _gramian(nn, ll, Ure, Mre)
@@ -154,7 +154,7 @@ function eval_basis(ll, Ure, Mll, X; Real = true)
     @assert all(length.(X) .== 3) 
  
     # NOTE: It seems that we will not go beyond vector valued functions in this package...?
-    _convert = Real ? real : complex # identity
+    _convert = complex # Real ? real : complex # identity
     val = _convert(zeros(typeof(Ure[1]), size(Ure,1)))
     
     basis = Real ? real_sphericalharmonics(maximum(ll)) : complex_sphericalharmonics(maximum(ll))
