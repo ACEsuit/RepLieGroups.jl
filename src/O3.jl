@@ -1,18 +1,53 @@
-module O3_new
-
-# Alternative to the computation of rotation equivariant coupling coefficients
+module O3
 
 import RepLieGroups
+
 using PartialWaveFunctions
 using Combinatorics
 using LinearAlgebra
 using StaticArrays
 
-using RepLieGroups.O3: Ctran
+export re_rpe, rpe_basis_new 
 
-export re_rpe, rpe_basis_new
 
-# The generalized Clebsch Gordan Coefficients; variables of this function are fully inherited from the first ACE paper
+# ------------------------------------------------------- 
+
+## NOTE: Ctran(L) is the transformation matrix from rSH to cSH. More specifically, 
+#        if we write Polynomials4ML rSH as R_{lm} and cSH as Y_{lm} and their corresponding 
+#        vectors of order L as R_L and Y_L, respectively. Then R_L = Ctran(L) * Y_L.
+#        This suggests that the "D-matrix" for the Polynomials4ML rSH is Ctran(l) * D(l) * Ctran(L)', 
+#        where D, the D-matrix for cSH. This inspires the following new CG recursion.
+
+# transformation matrix from RSH to CSH for different conventions
+function Ctran(i::Int64,j::Int64;convention = :SpheriCart)
+	if convention == :cSH
+		return i == j
+	end
+	
+	order_dict = Dict(:SpheriCart => [1,2,3,4], :CondonShortley => [4,3,2,1], :FHIaims => [4,2,3,1])
+	val_list = [(-1)^(i), im, (-1)^(i+1)*im, 1] ./ sqrt(2)
+	if abs(i) != abs(j)
+		return 0 
+	elseif i == j == 0
+		return 1
+	elseif i > 0 && j > 0
+		return val_list[order_dict[convention][1]]
+	elseif i < 0 && j < 0
+		return val_list[order_dict[convention][2]]
+	elseif i < 0 && j > 0
+		return val_list[order_dict[convention][3]]
+	elseif i > 0 && j < 0
+		return val_list[order_dict[convention][4]]
+	end
+end
+
+Ctran(l::Int64; convention = :SpheriCart) = sparse(Matrix{ComplexF64}([ Ctran(m,μ;convention=convention) for m = -l:l, μ = -l:l ])) |> dropzeros
+
+
+# -----------------------------------------------------
+
+# The generalized Clebsch Gordan Coefficients; variables of this function are 
+# fully inherited from the first ACE paper. 
 function GCG(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N::Int64;flag=:cSH) where N
     # @assert -L[N] ≤ M_N ≤ L[N] 
     if m_filter(m, M_N;flag=flag) == false || L[1] < abs(m[1])
@@ -40,7 +75,7 @@ function GCG(l::SVector{N,Int64},m::SVector{N,Int64},L::SVector{N,Int64},M_N::In
                 mm = SA[mm...]
                 @assert sum(mm) == M
                 C_loc = GCG(l,mm,L,M;flag=:cSH)
-                coeff = Ctran(M_N,M;convention=flag)' * prod( RepLieGroups.O3.Ctran(m[i],mm[i];convention=flag) for i in 1:N )
+                coeff = Ctran(M_N,M;convention=flag)' * prod( Ctran(m[i],mm[i];convention=flag) for i in 1:N )
                 C_loc *= coeff
                 C += C_loc
             end
