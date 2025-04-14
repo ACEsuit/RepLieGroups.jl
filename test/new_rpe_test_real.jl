@@ -6,6 +6,7 @@ using RepLieGroups.O3: Rot3DCoeffs_real, Ctran
 using Test
 
 # Test the new RPE basis up to L = 4
+@info("Testing the new rSH-based RPE basis")
 for L = 0:4
    @info("Testing L = $L")
    cc = Rot3DCoeffs_real(L)
@@ -54,11 +55,11 @@ for L = 0:4
       @assert length(ll) == length(nn)
 
       # random configurations
-      Rs = rand_config(length(ll))
-      θ = rand(3) * 2pi
-      Q = RotZYZ(θ...)
-      D = Ctran(L) * transpose(wignerD(L, θ...)) * Ctran(L)'
-      QRs = [Q*Rs[i] for i in 1:length(Rs)]
+      local Rs = rand_config(length(ll))
+      local θ = rand(3) * 2pi
+      local Q = RotZYZ(θ...)
+      local D = Ctran(L) * transpose(wignerD(L, θ...)) * Ctran(L)'
+      local QRs = [Q*Rs[i] for i in 1:length(Rs)]
 
       # tests for the re_basis, for L = 0 only since the re_basis is not implemented for L > 0 in the old version
       # @info("Testing the re_basis")

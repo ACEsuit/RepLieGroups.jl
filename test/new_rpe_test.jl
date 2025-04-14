@@ -5,6 +5,7 @@ using RepLieGroups.O3: Rot3DCoeffs
 using Test
 
 # Test the new RPE basis up to L = 4
+@info("Testing the new cSH-based RPE basis")
 for L = 0:4
    @info("Testing L = $L")
    cc = Rot3DCoeffs(L)
