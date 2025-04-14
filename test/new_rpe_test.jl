@@ -1,8 +1,10 @@
 
 using StaticArrays, LinearAlgebra, RepLieGroups, WignerD, Combinatorics, Rotations#, Polynomials4ML
 using WignerD: wignerD
-using RepLieGroups.O3: Rot3DCoeffs
+using RepLieGroups.O3: Rot3DCoeffs 
 using Test
+O3 = RepLieGroups.O3
+O3_new = RepLieGroups.O3_new
 
 # Test the new RPE basis up to L = 4
 @info("Testing the new cSH-based RPE basis")
@@ -54,7 +56,7 @@ for L = 0:4
       @assert length(ll) == length(nn)
       # t_re_old = @elapsed O3.re_basis(cc, ll)
       t_rpe_old = @elapsed coeffs_ind1_origin, MM1_origin = rpe_basis(cc, nn, ll) # This is the rpe coupling coefficients in EQM, which is our reference
-      rk1 = rank(gram(coeffs_ind1_origin); rtol=1e-12) # rank of the reference coupling coefficients
+      rk1 = rank(O3_new.gram(coeffs_ind1_origin); rtol=1e-12) # rank of the reference coupling coefficients
 
       # coeffs1, MM1 = O3.re_basis(cc, ll)
       # nbas_ri1 = size(coeffs1, 1)
@@ -87,26 +89,26 @@ for L = 0:4
       RR = make_batch(ntest, length(ll))
 
       X = rand_batch(; coeffs=coeffs_ind1_origin, MM=MM1_origin, ll=ll, nn=nn, batch = RR)
-      @test rank(gram(X); rtol=1e-12) == size(X,1)
+      @test rank(O3_new.gram(X); rtol=1e-12) == size(X,1)
 
       Xsym = sym_rand_batch(; coeffs=coeffs_ind1_origin, MM=MM1_origin, ll=ll, nn=nn, batch = RR)
-      @test rank(gram(Xsym); rtol=1e-12) == rk1
+      @test rank(O3_new.gram(Xsym); rtol=1e-12) == rk1
 
       # if RepLieGroups.SetLl_new(ll,L) |> length != 0
       if rk1 > 0
          # Version GD 
          # rewritten as a new interface
          # t_re = @elapsed re_rpe(nn,ll,L) # this is slightly longer than the new re, because it computes also the FMatrix for RPE
-         t_rpe = @elapsed coeffs_ind2, MM2 = rpe_basis_new(nn,ll,L)
+         t_rpe = @elapsed coeffs_ind2, MM2 = O3_new.rpe_basis_new(nn,ll,L)
          # computes the RI coupling coefs and RPI coefs at the same time
 
          # rk2 = rank(gram(coeffs2),rtol = 1e-12)
-         rk2 = rank(gram(coeffs_ind2),rtol = 1e-12)
+         rk2 = rank(O3_new.gram(coeffs_ind2),rtol = 1e-12)
          # @info("Testing rank_old = rank_new")
          @test rk1 == rk2
          
          Xsym_new = rand_batch(; coeffs=coeffs_ind2, MM=MM2, ll=ll, nn=nn, batch=RR) #this is symmetric
-         @test rank(gram(Xsym_new); rtol=1e-12) == rk2
+         @test rank(O3_new.gram(Xsym_new); rtol=1e-12) == rk2
 
          # NOTE FROM CO: same batch is used so can compare!!!
          fRs1 = eval_basis(Rs; coeffs = coeffs_ind2, MM = MM2, ll = ll, nn = nn)
@@ -128,7 +130,7 @@ for L = 0:4
 
          # Check that coefficients span same space
          # @info("Testing that the old and new coupling coefficients span the same space")
-         @test rank(gram([coeffsp1;coeffsp2]); rtol=1e-12) == rank(gram(coeffsp1); rtol=1e-12) == rank(gram(coeffsp2); rtol=1e-12)
+         @test rank(O3_new.gram([coeffsp1;coeffsp2]); rtol=1e-12) == rank(O3_new.gram(coeffsp1); rtol=1e-12) == rank(O3_new.gram(coeffsp2); rtol=1e-12)
 
 
          # Do the rand batch on the same set of points
@@ -143,7 +145,7 @@ for L = 0:4
          end
 
          # Check that values span same space
-         @test rank(gram([BB1;BB2]); rtol=1e-11) == rank(gram(BB1); rtol=1e-11) == rank(gram(BB2); rtol=1e-11)
+         @test rank(O3_new.gram([BB1;BB2]); rtol=1e-11) == rank(O3_new.gram(BB1); rtol=1e-11) == rank(O3_new.gram(BB2); rtol=1e-11)
 
          if verbose 
             # @info("Test $itest: t_re_old = $t_re_old, t_re = $t_re")

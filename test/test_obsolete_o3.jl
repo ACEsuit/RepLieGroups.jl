@@ -1,10 +1,13 @@
 using Test, RepLieGroups, StaticArrays, Polynomials4ML, SpheriCart
 using RepLieGroups.O3: ClebschGordan, Rot3DCoeffs, Rot3DCoeffs_real, Rot3DCoeffs_long, 
             re_basis, _mrange, MRange, Ctran, clebschgordan
+using RepLieGroups.O3_new: re_rpe            
 using Polynomials4ML: real_sphericalharmonics, complex_sphericalharmonics
 using Polynomials4ML.Testing: print_tf
 using LinearAlgebra
 using WignerD, Rotations, BlockDiagonals
+
+# include("utils/utils_for_tests.jl")
 
 ##
 @info("Testing the correctness of Ctran(L)")
@@ -180,6 +183,7 @@ for L = 0:4
          if !iseven(sum(ll)+L); continue; end 
          ll = SVector(ll...)      
          # Ure, Mll = re_basis(cgen, ll) # this one only works for L = 0
+         # TODO: this re_rpe lives in the new O3, not the old O3, why is the test here???
          Ure, _, _, Mll = re_rpe(ll, ll, L; flag = :SpheriCart)
          if size(Ure, 1) == 0; continue; end
 

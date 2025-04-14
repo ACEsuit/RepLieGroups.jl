@@ -1,8 +1,12 @@
+module O3_new
+
 # Alternative to the computation of rotation equivariant coupling coefficients
 
+import RepLieGroups
 using PartialWaveFunctions
 using Combinatorics
 using LinearAlgebra
+using StaticArrays
 
 using RepLieGroups.O3: Ctran
 
@@ -214,4 +218,6 @@ function rpe_basis_new(nn::SVector{N, Int64}, ll::SVector{N, Int64}, L::Int64; f
     U, S, V = svd(gram(FMatrix))
     rk = rank(Diagonal(S); rtol =  1e-12)
     return Diagonal(S[1:rk]) * (U[:, 1:rk]' * UMatrix), MM
- end
+end
+
+end

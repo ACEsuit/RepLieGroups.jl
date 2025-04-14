@@ -1,6 +1,6 @@
 using SpheriCart, StaticArrays, Polynomials4ML
 using RepLieGroups.O3: Rot3DCoeffs, Rot3DCoeffs_real, coco_dot, re_basis
-using RepLieGroups: gram
+# using RepLieGroups: gram
 using Polynomials4ML: complex_sphericalharmonics
 
 function eval_cheb(𝐫::AbstractVector, nmax)
