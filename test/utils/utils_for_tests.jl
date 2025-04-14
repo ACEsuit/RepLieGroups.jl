@@ -25,12 +25,15 @@ function eval_cheb(𝐫::AbstractVector, nmax)
    return [ cos( (n-1) * acos(x) ) for n = 1:nmax ]
 end 
 
+# evaluate the real spherical harmonics via SpheriCart
 function rYlm(L::Integer, 𝐫::SVector{3, T}) where {T} 
    basis = SpheriCart.SphericalHarmonics(L)
    return Vector(basis(𝐫))
 end
 
 
+# evaluate the complex spherical harmonics; first real via SpheriCart, and then 
+# the transformation to complex. 
 function cYlm(L::Integer, 𝐫::SVector{3, T}) where {T} 
    basis = SpheriCart.SphericalHarmonics(L)
    Y = Vector(Complex{T}.(basis(𝐫)))
@@ -39,6 +42,8 @@ function cYlm(L::Integer, 𝐫::SVector{3, T}) where {T}
 end
 
 
+# convert real to complex SH; 
+# TODO: can this be replaced by Ctran? 
 # m = 0 => do nothing; m ≠ 0 => linear combinations of ± m terms 
 function _convert_R2C!(Y::AbstractVector, LMAX::Integer)
    for l = 0:LMAX, m = 1:l 
