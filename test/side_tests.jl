@@ -8,7 +8,7 @@ function fit_recursion_oneterm(l1,m1,μ1,l2,m2,μ2)
    local theta, dset
    for i = 1:N_samp
       theta = rand() * 2pi
-      dset = [ Ctran(L) * wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
+      dset = [ Ctran(L) * WignerD.wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
 
       D(l,m,μ) = dset[l+1][m+l+1,μ+l+1]
       for (j,L) in enumerate(λset)
@@ -26,7 +26,7 @@ function fit_recursion_oneterm(l1,m1,μ1,l2,m2,μ2)
    
    for i = 1:N_samp
       theta = rand() * 2pi
-      dset = [ Ctran(L) * wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
+      dset = [ Ctran(L) * WignerD.wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
 
       D(l,m,μ) = dset[l+1][m+l+1,μ+l+1]
       for (j,L) in enumerate(λset)
@@ -50,7 +50,7 @@ function fit_recursion(l1,m1,μ1,l2,m2,μ2)
 
    for i = 1:N_samp
       theta = rand() * 2pi
-      dset = [ Ctran(L) * wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
+      dset = [ Ctran(L) * WignerD.wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
 
       D(l,m,μ) = dset[l+1][m+l+1,μ+l+1]
       for (j,L) in enumerate(λset)
@@ -111,7 +111,7 @@ function fit_recursion(l1,m1,μ1,l2,m2,μ2)
    
    for i = 1:N_samp
       theta = rand() * 2pi
-      dset = [ Ctran(L) * wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
+      dset = [ Ctran(L) * WignerD.wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
 
       D(l,m,μ) = dset[l+1][m+l+1,μ+l+1]
       for (j,L) in enumerate(λset)
@@ -203,9 +203,9 @@ end
 @info("1. Only when abs(m) == abs(μ) can the corresponding element be nonzero")
 for i = 1:50
    theta = rand() * 2pi
-   dset = [ Ctran(L) * wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
+   dset = [ Ctran(L) * WignerD.wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
    D(l,m,μ) = dset[l+1][m+l+1,μ+l+1]
-   # dset = [ wignerD(L, 0, 0, theta) for L = 0:Lmax ]
+   # dset = [ WignerD.wignerD(L, 0, 0, theta) for L = 0:Lmax ]
    
    l = rand(0:Lmax)
    m = rand(-l:l)
@@ -217,8 +217,8 @@ println()
 @info("2. D(l,m,μ) = D(l,-μ,-m)")
 for i = 1:50
    theta = rand() * 2pi
-   dset = [ Ctran(L) * wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
-   # dset = [ wignerD(L, 0, 0, theta) for L = 0:Lmax ]
+   dset = [ Ctran(L) * WignerD.wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
+   # dset = [ WignerD.wignerD(L, 0, 0, theta) for L = 0:Lmax ]
    D(l,m,μ) = dset[l+1][m+l+1,μ+l+1]
 
    l = rand(0:Lmax)
@@ -231,8 +231,8 @@ println()
 @info("3. D(l,m,μ) = -(-1)^{m==μ} * D(l,-m,-μ) - this is the most important part to simplify the recursion")
 for i = 1:50
    theta = rand() * 2pi
-   dset = [ Ctran(L) * wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
-   # dset = [ wignerD(L, 0, 0, theta) for L = 0:Lmax ]
+   dset = [ Ctran(L) * WignerD.wignerD(L, 0, 0, theta) * Ctran(L)' for L = 0:Lmax ]
+   # dset = [ WignerD.wignerD(L, 0, 0, theta) for L = 0:Lmax ]
    D(l,m,μ) = dset[l+1][m+l+1,μ+l+1]
 
    l = rand(0:Lmax)
