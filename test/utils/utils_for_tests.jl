@@ -2,8 +2,6 @@
 const ___UTILS_FOR_TESTS___ = true 
 
 using Test, SpheriCart, StaticArrays
-using Polynomials4ML: complex_sphericalharmonics
-
 using SpheriCart: idx2lm, lm2idx 
 
 ##
@@ -26,6 +24,36 @@ function eval_cheb(𝐫::AbstractVector, nmax)
    x = (0.1 + r) / 1.2
    return [ cos( (n-1) * acos(x) ) for n = 1:nmax ]
 end 
+
+function rYlm(L::Integer, 𝐫::SVector{3, T}) where {T} 
+   basis = SpheriCart.SphericalHarmonics(L)
+   return Vector(basis(𝐫))
+end
+
+
+function cYlm(L::Integer, 𝐫::SVector{3, T}) where {T} 
+   basis = SpheriCart.SphericalHarmonics(L)
+   Y = Vector(Complex{T}.(basis(𝐫)))
+   _convert_R2C!(Y, L)
+   return Y 
+end
+
+
+# m = 0 => do nothing; m ≠ 0 => linear combinations of ± m terms 
+function _convert_R2C!(Y::AbstractVector, LMAX::Integer)
+   for l = 0:LMAX, m = 1:l 
+      i_lm⁺ = lm2idx(l,  m)
+      i_lm⁻ = lm2idx(l, -m)
+      Ylm⁺ = Y[i_lm⁺]
+      Ylm⁻ = Y[i_lm⁻]
+      Y[i_lm⁺] = (-1)^m * (Ylm⁺ + im * Ylm⁻) / sqrt(2)
+      Y[i_lm⁻] = (Ylm⁺ - im * Ylm⁻) / sqrt(2)
+   end 
+	return Y 
+end 
+
+
+##
 
 # generate a random point on the unit sphere
 function rand_sphere() 
@@ -70,8 +98,9 @@ function eval_basis(Rs; coeffs, MM, ll, nn, Real = false)
    @assert length(Rs) == ORD # only for the non-sym basis!!
 
    # spherical harmonics 
-   basis = Real ? real_sphericalharmonics(maximum(ll)) : complex_sphericalharmonics(maximum(ll))
-   Y = [ basis(𝐫) for 𝐫 in Rs ]
+   Lmax = maximum(ll)
+   _Ylm = Real ? rYlm : cYlm
+   Y = [ _Ylm(Lmax, 𝐫) for 𝐫 in Rs ]
 
    # radial basis 
    T = [ eval_cheb(𝐫, maximum(nn)) for 𝐫 in Rs ]
@@ -82,7 +111,7 @@ function eval_basis(Rs; coeffs, MM, ll, nn, Real = false)
    BB = zeros(typeof(coeffs[1]), size(coeffs, 1))
    for i_mm = 1:length(MM)
       mm = MM[i_mm]
-      ii_lm = [ SpheriCart.lm2idx(ll[α], mm[α]) for α in 1:ORD ]
+      ii_lm = [ lm2idx(ll[α], mm[α]) for α in 1:ORD ]
       BB += coeffs[:, i_mm] * prod( Y[α][ii_lm[α]] * T[α][nn[α]] for α = 1:ORD )
    end 
 
@@ -102,8 +131,9 @@ function eval_sym_basis(Rs; coeffs, MM, ll, nn, Real = false)
    @assert all( length(mm) == ORD for mm in MM )
 
    # spherical harmonics 
-   basis = Real ? real_sphericalharmonics(maximum(ll)) : complex_sphericalharmonics(maximum(ll))
-   Y = [ basis(𝐫) for 𝐫 in Rs ]
+   Lmax = maximum(ll)
+   _Ylm = Real ? rYlm : cYlm
+   Y = [ _Ylm(Lmax, 𝐫) for 𝐫 in Rs ]
 
    # radial basis 
    T = [ eval_cheb(𝐫, maximum(nn)) for 𝐫 in Rs ]
@@ -114,7 +144,7 @@ function eval_sym_basis(Rs; coeffs, MM, ll, nn, Real = false)
    BB = zeros(typeof(coeffs[1]), size(coeffs, 1))
    for i_mm = 1:length(MM)
       mm = MM[i_mm]
-      ii_lm = [ SpheriCart.lm2idx(ll[α], mm[α]) for α in 1:ORD ]
+      ii_lm = [ lm2idx(ll[α], mm[α]) for α in 1:ORD ]
       BB += coeffs[:, i_mm] * prod( A[ii_lm[α], nn[α]] for α = 1:ORD )
    end 
 
@@ -192,8 +222,9 @@ function eval_basis(ll, Ure, Mll, X; Real = true)
     _convert = complex # Real ? real : complex # identity
     val = _convert(zeros(typeof(Ure[1]), size(Ure,1)))
     
-    basis = Real ? real_sphericalharmonics(maximum(ll)) : complex_sphericalharmonics(maximum(ll))
-    Ylm = [ basis(x) for x in X ]
+    Lmax = maximum(ll)
+    _Ylm = Real ? rYlm : cYlm
+    Ylm = [ _Ylm(Lmax, 𝐫) for 𝐫 in Rs ]
  
     for (i, mm) in enumerate(Mll)
        prod_Ylm = prod( Ylm[j][index_y(l, m)] 

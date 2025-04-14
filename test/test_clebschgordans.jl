@@ -1,4 +1,6 @@
+
 import PartialWaveFunctions
+PWF = PartialWaveFunctions
 
 ##
 
@@ -79,9 +81,10 @@ nerr = 0
 
 for j1 in 1:Lmax, m1 in -j1:j1
     for j2 in 1:Lmax, m2 in -j2:j2
-        for J in 1:Lmax, M in -J:J 
+        for J in 1:Lmax, M in -J:J
+            global nerr  
             C1 = _CGold.clebschgordan(j1, m1, j2, m2, J, M)
-            C2 = PartialWaveFunctions.clebschgordan(j1, m1, j2, m2, J, M)
+            C2 = PWF.clebschgordan(j1, m1, j2, m2, J, M)
             if abs(C1 - C2) > TOL 
                 @error("""Clebsch-Gordan error: 
                                 j1 = $j1, m1 = $m1, 
@@ -100,3 +103,46 @@ else
 end
 
 @test nerr == 0
+
+## 
+
+# The following is an alternative test of Clebsch Gordans that should 
+# technically be enough on its own. (we keep both for now...)
+
+@info("Checking the SphH expansion in terms of CG coeffs")
+# expansion coefficients of a product of two spherical harmonics in terms a
+# single spherical harmonic
+# see e.g. https://en.wikipedia.org/wiki/Clebsch–Gordan_coefficients
+# this is the magic formula that we need, on which everything else is based
+
+Lmax = 10
+TOL = 1e-14
+NTEST = 30 
+
+for _ = 1:NTEST 
+      local θ
+      # two random Ylm  ...
+      l1, l2 = rand(1:10), rand(1:10)
+      m1, m2 = rand(-l1:l1), rand(-l2:l2)
+      # ... evaluated at random spherical coordinates
+      θ = rand() * π
+      local φ = (rand()-0.5) * 2*π
+      R = SVector( cos(φ)*sin(θ), sin(φ)*sin(θ), cos(θ) )
+      # evaluate all relevant Ylms (up to l1 + l2)
+      
+      Ylm = cYlm(l1 + l2, R)
+      # evaluate the product p = Y_l1_m1 * Y_l2_m2
+      p = Ylm[lm2idx(l1,  m1)] * Ylm[lm2idx(l2,m2)]
+      # and its expansion in terms of CG coeffs
+      p2 = 0.0
+      M = m1 + m2  # all other coeffs are zero
+
+      for L = abs(M):(l1+l2)
+            p2 += sqrt( (2*l1+1)*(2*l2+1) / (4 * π * (2*L+1)) ) *
+                PWF.clebschgordan(l1,  0, l2,  0, L, 0) *
+                PWF.clebschgordan(l1, m1, l2, m2, L, M) *
+                Ylm[lm2idx(L, M)]
+      end
+      print_tf((@test (p ≈ p2) || (abs(p-p2) < 1e-15)))
+end
+println()
