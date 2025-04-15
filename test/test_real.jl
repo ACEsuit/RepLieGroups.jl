@@ -1,7 +1,6 @@
 
-using StaticArrays, LinearAlgebra, RepLieGroups, WignerD, Combinatorics, Rotations#, Polynomials4ML
+using StaticArrays, LinearAlgebra, RepLieGroups, WignerD, Combinatorics, Rotations
 using WignerD: wignerD
-using Polynomials4ML.Testing: print_tf
 using Test
 import RepLieGroups
 

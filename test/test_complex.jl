@@ -1,10 +1,15 @@
 
-using StaticArrays, LinearAlgebra, RepLieGroups, WignerD, Combinatorics, Rotations#, Polynomials4ML
+using StaticArrays, LinearAlgebra, RepLieGroups, WignerD, Combinatorics, 
+      Rotations
 using WignerD: wignerD
-using RepLieGroups.O3: Rot3DCoeffs 
+
 using Test
 O3 = RepLieGroups.O3
 O3_new = RepLieGroups.O3_new
+
+isdefined(Main, :___UTILS_FOR_TESTS___) || include("utils/utils_for_tests.jl")
+
+##
 
 # Test the new RPE basis up to L = 4
 @info("Testing the new cSH-based RPE basis")

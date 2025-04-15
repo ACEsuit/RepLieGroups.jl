@@ -1,8 +1,9 @@
 
 
-using RepLieGroups: SYYVector, _lm2i,_i2lm
+using RepLieGroups: SYYVector, _lm2i, _i2lm
 using Test
-using Polynomials4ML.Testing: print_tf
+
+isdefined(Main, :___UTILS_FOR_TESTS___) || include("utils/utils_for_tests.jl")
 
 ##
 
