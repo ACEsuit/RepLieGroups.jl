@@ -9,7 +9,7 @@ isdefined(Main, :___UTILS_FOR_TESTS___) || include("utils/utils_for_tests.jl")
 
 ##
 
-@info("Equivariance of coupled cSH & rSH based basis")  
+@info("Equivariance and Linear Independence of coupled cSH & rSH based basis")
 Lmax = 3
 for L = 0:Lmax 
    local θ, ll, Ure, Ure_r, U_rpe, U_rpe_r, Mll, Mll_r 
