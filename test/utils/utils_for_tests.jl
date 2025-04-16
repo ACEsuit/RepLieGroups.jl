@@ -39,7 +39,7 @@ end
 
 # evaluate the complex spherical harmonics; first real via SpheriCart, and then 
 # the transformation to complex. 
-function cYlm(L::Integer, 𝐫::SVector{3, T}; method = :Ctran, convention = :SpheriCart) where {T} 
+function cYlm(L::Integer, 𝐫::SVector{3, T}; method = :LC, convention = :SpheriCart) where {T} 
    basis = SpheriCart.SphericalHarmonics(L)
    Y = Vector(Complex{T}.(basis(𝐫)))
    _convert_R2C!(Y, L; method=method, convention=convention)
