@@ -13,7 +13,6 @@ isdefined(Main, :___UTILS_FOR_TESTS___) || include("utils/utils_for_tests.jl")
 
     @testset "Rot3DCoeffs" begin include("test_obsolete_o3.jl"); end
 
-    # @testset "O3 new" begin include("new_rpe_test.jl"); end
+    # @testset "O3 new" begin include("BenchMarkTests/test_benchmark.jl"); end
 
-    # @testset "O3 new real" begin include("new_rpe_test_real.jl"); end
 end

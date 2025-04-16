@@ -4,8 +4,6 @@ using PartialWaveFunctions: clebschgordan
 using LinearAlgebra
 using WignerD, Rotations, BlockDiagonals
 
-include("utils/utils_for_tests.jl")
-
 ##
 @info("Testing the correctness of Ctran(L)")
 Lmax = 4
