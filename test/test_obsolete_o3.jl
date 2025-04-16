@@ -66,7 +66,6 @@ println()
 
 @info("Testing the D-matrix for rSH")
 Lmax = 4
-basis = real_sphericalharmonics(Lmax)
 for ntest = 1:30
    local θ, Q
    x = @SVector rand(3)

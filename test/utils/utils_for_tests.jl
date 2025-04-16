@@ -3,6 +3,7 @@ const ___UTILS_FOR_TESTS___ = true
 
 using Test, SpheriCart, StaticArrays, BlockDiagonals
 using SpheriCart: idx2lm, lm2idx 
+using RepLieGroups.O3: Ctran
 
 ##
 
