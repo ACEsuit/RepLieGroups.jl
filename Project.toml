@@ -1,6 +1,5 @@
 name = "RepLieGroups"
 uuid = "f07d36f2-91c4-427a-b67b-965fe5ebe1d2"
-authors = ["Christoph Ortner <christophortner@gmail.com> and contributors"]
 version = "0.1-dev"
 
 [deps]

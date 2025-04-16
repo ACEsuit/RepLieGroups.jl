@@ -1,13 +1,13 @@
 
-import PartialWaveFunctions
-PWF = PartialWaveFunctions
+import PartialWaveFunctions as PWF 
+
+isdefined(Main, :___UTILS_FOR_TESTS___) || include("utils/utils_for_tests.jl")
 
 ##
 
 # our original reference implementation of CG coeffs, which we no longer 
 # use, but we keep this test to make sure our assumptions are consistent 
 # with the PartialWaveFunctions implementation. 
-
 module _CGold
 
 cg_conditions(j1,m1, j2,m2, J,M) =

@@ -33,7 +33,8 @@ for L = 0:4
    @info("test whether y[Val(l)] is as expected.")
    for l = 0:L
       print_tf(@test y[Val(l)] == [data...][l^2+1:(l+1)^2])
-      print_tf(@test y[Val(l)] == y[l^2+1:(l+1)^2]) # Redundant but can serve as an "cross validation"...
+      # Redundant but can serve as an "cross validation"...
+      print_tf(@test y[Val(l)] == y[l^2+1:(l+1)^2]) 
    end
    println()
 end
