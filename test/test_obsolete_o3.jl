@@ -163,9 +163,6 @@ for L = 0:4
    long_nnll_list = nnll_list 
    short_nnll_list = nnll_list[1:10:end]
    ultra_short_nnll_list = nnll_list[1:100:end]
-   @show length(long_nnll_list)
-   @show length(short_nnll_list)
-   @show length(ultra_short_nnll_list)
 
    verbose = true 
 
