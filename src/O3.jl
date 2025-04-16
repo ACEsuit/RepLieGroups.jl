@@ -6,6 +6,7 @@ using PartialWaveFunctions
 using Combinatorics
 using LinearAlgebra
 using StaticArrays
+using SparseArrays
 
 export re_rpe, rpe_basis_new 
 
