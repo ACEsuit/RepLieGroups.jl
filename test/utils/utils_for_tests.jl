@@ -1,7 +1,7 @@
 
 const ___UTILS_FOR_TESTS___ = true 
 
-using Test, SpheriCart, StaticArrays
+using Test, SpheriCart, StaticArrays, BlockDiagonals
 using SpheriCart: idx2lm, lm2idx 
 
 ##
@@ -26,34 +26,45 @@ function eval_cheb(𝐫::AbstractVector, nmax)
 end 
 
 # evaluate the real spherical harmonics via SpheriCart
-function rYlm(L::Integer, 𝐫::SVector{3, T}) where {T} 
-   basis = SpheriCart.SphericalHarmonics(L)
+function rYlm(L::Integer, 𝐫::SVector{3, T}; convention = :SpheriCart) where {T}
+   if convention == :SpheriCart 
+      basis = SpheriCart.SphericalHarmonics(L)
+   else
+      @error("Only SpheriCart convention is supported for now.")
+   end
    return Vector(basis(𝐫))
 end
 
 
 # evaluate the complex spherical harmonics; first real via SpheriCart, and then 
 # the transformation to complex. 
-function cYlm(L::Integer, 𝐫::SVector{3, T}) where {T} 
+function cYlm(L::Integer, 𝐫::SVector{3, T}; method = :Ctran, convention = :SpheriCart) where {T} 
    basis = SpheriCart.SphericalHarmonics(L)
    Y = Vector(Complex{T}.(basis(𝐫)))
-   _convert_R2C!(Y, L)
+   _convert_R2C!(Y, L; method=method, convention=convention)
    return Y 
 end
 
 
 # convert real to complex SH; 
 # TODO: can this be replaced by Ctran? 
+# LZ: Yes, I will add an option of using Ctran and compare
+#     I would make the linear combination approach the default one, though, because if we use Ctran, and test with Ctran, that would more or less be a petitio principiiListen
 # m = 0 => do nothing; m ≠ 0 => linear combinations of ± m terms 
-function _convert_R2C!(Y::AbstractVector, LMAX::Integer)
-   for l = 0:LMAX, m = 1:l 
-      i_lm⁺ = lm2idx(l,  m)
-      i_lm⁻ = lm2idx(l, -m)
-      Ylm⁺ = Y[i_lm⁺]
-      Ylm⁻ = Y[i_lm⁻]
-      Y[i_lm⁺] = (-1)^m * (Ylm⁺ + im * Ylm⁻) / sqrt(2)
-      Y[i_lm⁻] = (Ylm⁺ - im * Ylm⁻) / sqrt(2)
-   end 
+function _convert_R2C!(Y::AbstractVector, LMAX::Integer; method = :LC, convention = :SpheriCart) # method can be :Ctran or :LC (Linear Combination)
+   @assert length(Y) == (LMAX+1)^2
+   if method == :LC
+      for l = 0:LMAX, m = 1:l 
+         i_lm⁺ = lm2idx(l,  m)
+         i_lm⁻ = lm2idx(l, -m)
+         Ylm⁺ = Y[i_lm⁺]
+         Ylm⁻ = Y[i_lm⁻]
+         Y[i_lm⁺] = (-1)^m * (Ylm⁺ + im * Ylm⁻) / sqrt(2)
+         Y[i_lm⁻] = (Ylm⁺ - im * Ylm⁻) / sqrt(2)
+      end
+   elseif method == :Ctran
+      Y .= BlockDiagonal([ Ctran(L;convention) for L = 0:LMAX ])' * Y
+   end
 	return Y 
 end 
 
@@ -219,6 +230,8 @@ end
 
 ##
 
+index_y(l::Integer, m::Integer) = m + l + (l*l) + 1 # function hacked from P4ML
+
 function eval_basis(ll, Ure, Mll, X; Real = true)
     @assert length(X) == length(ll)
     @assert all(length.(X) .== 3) 
@@ -229,7 +242,7 @@ function eval_basis(ll, Ure, Mll, X; Real = true)
     
     Lmax = maximum(ll)
     _Ylm = Real ? rYlm : cYlm
-    Ylm = [ _Ylm(Lmax, 𝐫) for 𝐫 in Rs ]
+    Ylm = [ _Ylm(Lmax, 𝐫) for 𝐫 in X ]
  
     for (i, mm) in enumerate(Mll)
        prod_Ylm = prod( Ylm[j][index_y(l, m)] 

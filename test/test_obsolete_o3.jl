@@ -1,4 +1,4 @@
-using Test, RepLieGroups, StaticArrays, Polynomials4ML, SpheriCart, Combinatorics
+using Test, RepLieGroups, StaticArrays, SpheriCart, Combinatorics
 using RepLieGroups.O3: Ctran, re_rpe, rpe_basis_new, gram
 using PartialWaveFunctions: clebschgordan
 using LinearAlgebra
