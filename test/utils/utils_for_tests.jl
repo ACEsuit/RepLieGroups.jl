@@ -50,7 +50,7 @@ end
 # convert real to complex SH; 
 # TODO: can this be replaced by Ctran? 
 # LZ: Yes, I will add an option of using Ctran and compare
-#     I would make the linear combination approach the default one, though, because if we use Ctran, and test with Ctran, that would more or less be a petitio principiiListen
+#     I would make the linear combination approach the default one, though, because if we use Ctran, and test with Ctran, that would more or less be a petitio principii
 # m = 0 => do nothing; m ≠ 0 => linear combinations of ± m terms 
 function _convert_R2C!(Y::AbstractVector, LMAX::Integer; method = :LC, convention = :SpheriCart) # method can be :Ctran or :LC (Linear Combination)
    @assert length(Y) == (LMAX+1)^2
