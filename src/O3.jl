@@ -8,7 +8,7 @@ using LinearAlgebra
 using StaticArrays
 using SparseArrays
 
-export re_rpe, rpe_basis_new 
+export coupling_coeffs
 
 
 # ------------------------------------------------------- 
@@ -201,25 +201,50 @@ end
 # Function that generates the set of ordered m's given `n` and `l` with the abosolute sum of m's being smaller than L.
 m_generate(n,l,L;flag=:cSH) = union([m_generate(n,l,L,k;flag)[1] for k in -L:L]...), sum(length.(union([m_generate(n,l,L,k;flag)[1] for k in -L:L]...))) # orginal version: sum(m_generate(n,l,L,k;flag)[2] for k in -L:L), but this cannot be true anymore b.c. the m_classes can intersect
 
+function gram(X::Matrix{SVector{N,T}}) where {N,T}
+    G = zeros(T, size(X,1), size(X,1))
+    for i = 1:size(X,1)
+       for j = i:size(X,1)
+          G[i,j] = sum(dot(X[i,t], X[j,t]) for t = 1:size(X,2))
+          i == j ? nothing : (G[j,i]=G[i,j]')
+       end
+    end
+    return G
+ end
 
-# Function that generates the coupling coefficient of the RE basis given `n` and `l`., the FMatrix for generating the RPE basis is also generated here.
-function re_rpe(n::SVector{N,Int64},l::SVector{N,Int64},L::Int64;flag=:cSH) where N
-    Lset = SetLl(l,L)
+gram(X::Matrix{<:Number}) = X * X'
+
+function lexi_ord(nn::SVector{N, Int64}, ll::SVector{N, Int64}) where N
+    pairs = collect(zip(ll, nn))         # create (lᵢ, nᵢ) pairs
+    sort!(pairs)                         # sort lexicographically: first by lᵢ, then by nᵢ
+    return SVector{N}(last.(pairs)), SVector{N}(first.(pairs))
+end
+
+# Function that generates the coupling coefficient of the RE basis (PI = false) 
+# or RPE basis (PI = true) given `nn` and `ll`. 
+function coupling_coeffs(nn::SVector{N, Int64}, ll::SVector{N, Int64}, L::Int64; flag = :cSH, PI = true) where N
+
+    # TODO: when PI, (nn, ll) should be ordered 
+    if PI
+        nn, ll = lexi_ord(nn, ll)
+    end
+
+    Lset = SetLl(ll,L)
     r = length(Lset)
     T = L == 0 ? Float64 : SVector{2L+1,Float64}
     if r == 0 
         return zeros(T, 1, 1), zeros(T, 1, 1), [zeros(Int,N)], [zeros(Int,N)]
     else 
-        MMmat, size_m = m_generate(n,l,L;flag=flag) # classes of m's
+        MMmat, size_m = m_generate(nn,ll,L;flag=flag) # classes of m's
         FMatrix=zeros(T, r, length(MMmat)) # Matrix containing f(m,i)
         UMatrix=zeros(T, r, size_m) # Matrix containing the the coupling coefficients D
         MM = [] # all possible m's
         for i in 1:r
             c = 0
             for (j,m_class) in enumerate(MMmat)
-                for m in m_class
+                for mm in m_class
                     c += 1
-                    cg_coef = GCG(l,m,Lset[i];vectorize=(L!=0),flag=flag)
+                    cg_coef = GCG(ll,mm,Lset[i];vectorize=(L!=0),flag=flag)
                     FMatrix[i,j]+= cg_coef
                     UMatrix[i,c] = cg_coef
                 end
@@ -232,28 +257,22 @@ function re_rpe(n::SVector{N,Int64},l::SVector{N,Int64},L::Int64;flag=:cSH) wher
             end
         end      
     end
-    return UMatrix, FMatrix, MMmat, MM
-end
 
-function gram(X::Matrix{SVector{N,T}}) where {N,T}
-    G = zeros(T, size(X,1), size(X,1))
-    for i = 1:size(X,1)
-       for j = i:size(X,1)
-          G[i,j] = sum(dot(X[i,t], X[j,t]) for t = 1:size(X,2))
-          i == j ? nothing : (G[j,i]=G[i,j]')
-       end
+    if !PI
+        # return RE coupling coeffs if the permutation invariance is not needed
+        return UMatrix, MM
+    else
+        U, S, V = svd(gram(FMatrix))
+        rk = rank(Diagonal(S); rtol =  1e-12)
+        # return the RE-PI coupling coeffs
+        return Diagonal(S[1:rk]) * (U[:, 1:rk]' * UMatrix), MM
     end
-    return G
- end
-
- gram(X::Matrix{<:Number}) = X * X'
-
-function rpe_basis_new(nn::SVector{N, Int64}, ll::SVector{N, Int64}, L::Int64; flag = :cSH) where N
-    t_re = @elapsed UMatrix, FMatrix, MMmat, MM = re_rpe(nn, ll, L; flag = flag) # time of constructing the re_basis
-    # @show t_re # should be removed in the final version
-    U, S, V = svd(gram(FMatrix))
-    rk = rank(Diagonal(S); rtol =  1e-12)
-    return Diagonal(S[1:rk]) * (U[:, 1:rk]' * UMatrix), MM
 end
+
+# In the case the nn is absence, we consider everything on the unit sphere and
+# thus set n = ones(N) - constant radial (the index for radial starts from 1)
+# TODO: Do we need a warning here for the RPE case
+coupling_coeffs(ll::SVector{N, Int64}, L::Int64; flag = :cSH, PI = true) where N = 
+    coupling_coeffs(SA[ones(Int64, N)...], ll, L; flag = flag, PI = PI)
 
 end

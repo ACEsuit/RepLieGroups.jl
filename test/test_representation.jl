@@ -1,8 +1,8 @@
 using Test, RepLieGroups, StaticArrays, SpheriCart, Combinatorics
-using RepLieGroups.O3: Ctran, re_rpe, rpe_basis_new, gram
+using RepLieGroups.O3: Ctran
 using PartialWaveFunctions: clebschgordan
 using LinearAlgebra
-using WignerD, Rotations, BlockDiagonals
+using WignerD, Rotations
 
 isdefined(Main, :___UTILS_FOR_TESTS___) || include("utils/utils_for_tests.jl")
 

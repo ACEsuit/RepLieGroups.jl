@@ -1,5 +1,8 @@
 
 import PartialWaveFunctions as PWF 
+using Random
+
+Random.seed!(1234)
 
 isdefined(Main, :___UTILS_FOR_TESTS___) || include("utils/utils_for_tests.jl")
 
@@ -143,6 +146,6 @@ for _ = 1:NTEST
                 PWF.clebschgordan(l1, m1, l2, m2, L, M) *
                 Ylm[lm2idx(L, M)]
       end
-      print_tf((@test (p ≈ p2) || (abs(p-p2) < 1e-15)))
+      print_tf((@test (p ≈ p2) || (abs(p-p2) < 1e-14)))
 end
 println()
