@@ -251,7 +251,11 @@ function coupling_coeffs(L::Integer, ll, nn = nothing;
 
     # convert nn into an SVector{N, Int}, as required internally 
     if isnothing(nn) 
-        _nn = SVector{N, Int}((1:N)...)
+        if PI 
+            _nn = SVector{N, Int}(ntuple(i -> 0, N)...)
+        else 
+            _nn = SVector{N, Int}((1:N)...)
+        end
     elseif length(nn) != N 
         error("""coupling_coeffs(L::Integer, ll, nn) requires ll and nn to be 
                of the same length""")
@@ -264,7 +268,15 @@ function coupling_coeffs(L::Integer, ll, nn = nothing;
         end
     end 
 
-    flag = (basis == complex) ? (:cSH) : (:SpheriCart) # Our default rSH convention is based on SpheriCart
+    if basis == complex 
+        flag = :cSH 
+    elseif basis == real 
+        flag = :SpheriCart
+    elseif basis isa Symbol
+        flag = basis 
+    else 
+        error("unknown basis type: $basis")
+    end
     
     return _coupling_coeffs(_L, _ll, _nn; PI = PI, flag = flag)
 end

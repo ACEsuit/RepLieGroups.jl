@@ -15,6 +15,4 @@ isdefined(Main, :___UTILS_FOR_TESTS___) || include("utils/utils_for_tests.jl")
 
     @testset "Coupling Coeffs" begin include("test_coupling.jl"); end
 
-    # @testset "O3 new" begin include("BenchMarkTests/test_benchmark.jl"); end
-
 end

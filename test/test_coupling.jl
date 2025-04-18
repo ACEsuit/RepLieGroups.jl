@@ -53,9 +53,9 @@ for L = 0:Lmax
       @assert length(ll) == length(nn)
 
       Ure, Mll = coupling_coeffs(L, ll, nn; PI = false) # cSH based re_basis
-      Ure_r, Mll_r = coupling_coeffs(L, ll, nn;PI = false, basis = :rSH) # rSH based re_basis
+      Ure_r, Mll_r = coupling_coeffs(L, ll, nn; PI = false, basis = real) # rSH based re_basis
       Urpe, Mll = coupling_coeffs(L, ll, nn) # cSH based rpe_basis
-      Urpe_r, Mll_r = coupling_coeffs(L, ll, nn; basis = :rSH) # rSH based rpe_basis
+      Urpe_r, Mll_r = coupling_coeffs(L, ll, nn; basis = real) # rSH based rpe_basis
 
       rk = rank(gram(Urpe), rtol = 1e-12)
       rk_r = rank(gram(Urpe_r), rtol = 1e-12)
