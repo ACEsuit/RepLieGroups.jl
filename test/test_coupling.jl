@@ -52,10 +52,10 @@ for L = 0:Lmax
       N = length(ll)
       @assert length(ll) == length(nn)
 
-      Ure, Mll = coupling_coeffs(nn, ll, L; PI = false) # cSH based re_basis
-      Ure_r, Mll_r = coupling_coeffs(nn, ll, L; flag = :SpheriCart, PI = false) # rSH based re_basis
-      Urpe, Mll = coupling_coeffs(nn, ll, L) # cSH based rpe_basis
-      Urpe_r, Mll_r = coupling_coeffs(nn, ll, L; flag = :SpheriCart) # rSH based rpe_basis
+      Ure, Mll = coupling_coeffs(L, ll, nn; PI = false) # cSH based re_basis
+      Ure_r, Mll_r = coupling_coeffs(L, ll, nn;PI = false, basis = :rSH) # rSH based re_basis
+      Urpe, Mll = coupling_coeffs(L, ll, nn) # cSH based rpe_basis
+      Urpe_r, Mll_r = coupling_coeffs(L, ll, nn; basis = :rSH) # rSH based rpe_basis
 
       rk = rank(gram(Urpe), rtol = 1e-12)
       rk_r = rank(gram(Urpe_r), rtol = 1e-12)
@@ -124,10 +124,10 @@ for L = 0:Lmax
    for (itest, ll) in enumerate(ll_list)
       N = length(ll)
 
-      Ure, Mll = coupling_coeffs(ll, L; PI = false) # cSH based re_basis
-      Ure_r, Mll_r = coupling_coeffs(ll, L; flag = :SpheriCart, PI = false) # rSH based re_basis
-      Urpe, Mll = coupling_coeffs(ll, L) # cSH based rpe_basis
-      Urpe_r, Mll_r = coupling_coeffs(ll, L; flag = :SpheriCart) # rSH based rpe_basis
+      Ure, Mll = coupling_coeffs(L, ll; PI = false) # cSH based re_basis
+      Ure_r, Mll_r = coupling_coeffs(L, ll; PI = false, basis = :SpheriCart) # rSH based re_basis
+      Urpe, Mll = coupling_coeffs(L, ll) # cSH based rpe_basis
+      Urpe_r, Mll_r = coupling_coeffs(L, ll; basis = :SpheriCart) # rSH based rpe_basis
 
       rk = rank(gram(Urpe), rtol = 1e-12)
       rk_r = rank(gram(Urpe_r), rtol = 1e-12)
@@ -175,9 +175,8 @@ for L = 0:Lmax
       end
 
       # @info("Check the linear independence of the basis")
-      nn = SA[ones(Int, N)...] 
-      # wWith the absence of nn, we assume that the radial part just doesn't contribute
-      # All n's are one because the radial basis starts from index 1
+      nn = SVector{N, Int}((1:N)...)
+      # With the absence of nn, nn are set to be SVector{N, Int}((1:N)...) by default
       ntest = 1000
 
       Xs = make_batch(ntest, length(ll))

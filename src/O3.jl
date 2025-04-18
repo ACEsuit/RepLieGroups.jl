@@ -264,15 +264,15 @@ function coupling_coeffs(L::Integer, ll, nn = nothing;
         end
     end 
 
-    flag = (basis == complex) ? (:cSH) : (:rSH)
+    flag = (basis == complex) ? (:cSH) : (:SpheriCart) # Our default rSH convention is based on SpheriCart
     
-    return _coupling_coeffs(_L, _ll, _nn; PI = PI, )
+    return _coupling_coeffs(_L, _ll, _nn; PI = PI, flag = flag)
 end
     
 
 # Function that generates the coupling coefficient of the RE basis (PI = false) 
 # or RPE basis (PI = true) given `nn` and `ll`. 
-function _coupling_coeffs(L::Int64, ll::SVector{N, Int64}, nn::SVector{N, Int64}, 
+function _coupling_coeffs(L::Int64, ll::SVector{N, Int64}, nn::SVector{N, Int64}; 
                           PI = true, flag = :cSH) where N
 
     # TODO: when PI, (nn, ll) should be ordered 
@@ -319,11 +319,5 @@ function _coupling_coeffs(L::Int64, ll::SVector{N, Int64}, nn::SVector{N, Int64}
         return Diagonal(S[1:rk]) * (U[:, 1:rk]' * UMatrix), MM
     end
 end
-
-# In the case the nn is absence, we consider everything on the unit sphere and
-# thus set n = ones(N) - constant radial (the index for radial starts from 1)
-# TODO: Do we need a warning here for the RPE case
-coupling_coeffs(ll::SVector{N, Int64}, L::Int64; flag = :cSH, PI = true) where N = 
-    coupling_coeffs(SA[ones(Int64, N)...], ll, L; flag = flag, PI = PI)
 
 end
