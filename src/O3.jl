@@ -220,9 +220,60 @@ function lexi_ord(nn::SVector{N, Int64}, ll::SVector{N, Int64}) where N
     return SVector{N}(last.(pairs)), SVector{N}(first.(pairs))
 end
 
+"""
+    O3.coupling_coeffs(L, ll, nn; PI, basis)
+    O3.coupling_coeffs(L, ll; PI, basis)
+
+Compute coupling coefficients for the spherical harmonics basis, where 
+- `L` must be an `Integer`;
+- `ll, nn` must be vectors or tuples of `Integer` of the same length.
+- `PI`: whether or not the coupled basis is permutation-invariant (or the 
+corresponding tensor symmetric); default is `true` when `nn` is provided 
+and `false` when `nn` is not provided.
+- `basis`: which basis is being coupled, default is `complex`, alternative
+choice is `real`, which is compatible with the `SpheriCart.jl` convention.  
+"""
+function coupling_coeffs(L::Integer, ll, nn = nothing; 
+                         PI = !(isnothing(nn)), 
+                         basis = complex)
+
+    # convert L into the format required internally 
+    _L = Int(L) 
+
+    # convert ll into an SVector{N, Int}, as required internally 
+    N = length(ll) 
+    _ll = try 
+        _ll = SVector{N, Int}(ll...)
+    catch 
+        error("""coupling_coeffs(L::Integer, ll, ...) requires ll to be 
+               a vector or tuple of integers""")
+    end
+
+    # convert nn into an SVector{N, Int}, as required internally 
+    if isnothing(nn) 
+        _nn = SVector{N, Int}((1:N)...)
+    elseif length(nn) != N 
+        error("""coupling_coeffs(L::Integer, ll, nn) requires ll and nn to be 
+               of the same length""")
+    else
+        _nn = try 
+            _nn = SVector{N, Int}(nn...)
+        catch 
+            error("""coupling_coeffs(L::Integer, ll, nn) requires nn to be 
+                   a vector or tuple of integers""")
+        end
+    end 
+
+    flag = (basis == complex) ? (:cSH) : (:rSH)
+    
+    return _coupling_coeffs(_L, _ll, _nn; PI = PI, )
+end
+    
+
 # Function that generates the coupling coefficient of the RE basis (PI = false) 
 # or RPE basis (PI = true) given `nn` and `ll`. 
-function coupling_coeffs(nn::SVector{N, Int64}, ll::SVector{N, Int64}, L::Int64; flag = :cSH, PI = true) where N
+function _coupling_coeffs(L::Int64, ll::SVector{N, Int64}, nn::SVector{N, Int64}, 
+                          PI = true, flag = :cSH) where N
 
     # TODO: when PI, (nn, ll) should be ordered 
     if PI
