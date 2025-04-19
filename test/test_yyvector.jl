@@ -1,8 +1,9 @@
 
 
-using RepLieGroups: SYYVector, _lm2i,_i2lm
+using RepLieGroups: SYYVector, _lm2i, _i2lm
 using Test
-using Polynomials4ML.Testing: print_tf
+
+isdefined(Main, :___UTILS_FOR_TESTS___) || include("utils/utils_for_tests.jl")
 
 ##
 
@@ -32,7 +33,8 @@ for L = 0:4
    @info("test whether y[Val(l)] is as expected.")
    for l = 0:L
       print_tf(@test y[Val(l)] == [data...][l^2+1:(l+1)^2])
-      print_tf(@test y[Val(l)] == y[l^2+1:(l+1)^2]) # Redundant but can serve as an "cross validation"...
+      # Redundant but can serve as an "cross validation"...
+      print_tf(@test y[Val(l)] == y[l^2+1:(l+1)^2]) 
    end
    println()
 end

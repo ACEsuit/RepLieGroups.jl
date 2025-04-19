@@ -257,7 +257,7 @@ function Ctran(i::Int64,j::Int64;convention = :SpheriCart)
 	end
 end
 
-Ctran(l::Int64;convention = :SpheriCart) = sparse(Matrix{ComplexF64}([ Ctran(m,μ;convention=convention) for m = -l:l, μ = -l:l ])) |> dropzeros
+Ctran(l::Int64; convention = :SpheriCart) = sparse(Matrix{ComplexF64}([ Ctran(m,μ;convention=convention) for m = -l:l, μ = -l:l ])) |> dropzeros
 
 ## NOTE: Ctran(L) is the transformation matrix from rSH to cSH. More specifically, 
 #        if we write Polynomials4ML rSH as R_{lm} and cSH as Y_{lm} and their corresponding 

@@ -1,8 +1,8 @@
 module RepLieGroups
 
-include("yyvector.jl")
+export O3 
 
-include("obsolete/obsolete.jl")
+include("yyvector.jl")
 
 include("O3.jl")
 
