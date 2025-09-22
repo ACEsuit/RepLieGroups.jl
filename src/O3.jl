@@ -296,7 +296,7 @@ function _coupling_coeffs(L::Int64, ll::SVector{N, Int64}, nn::SVector{N, Int64}
     r = length(Lset)
     T = L == 0 ? Float64 : SVector{2L+1,Float64}
     if r == 0 
-        return zeros(T, 1, 1), zeros(T, 1, 1), [zeros(Int,N)], [zeros(Int,N)]
+        return zeros(T, 0, 1), [zeros(Int,N)] # no valid coupling, return empty array
     else 
         MMmat, size_m = m_generate(nn,ll,L;flag=flag) # classes of m's
         FMatrix=zeros(T, r, length(MMmat)) # Matrix containing f(m,i)
